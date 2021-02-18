@@ -17,18 +17,16 @@ from torchvision import transforms
 from torch import nn
 import copy
 
-from config import FONT_FILE_DIR, EXTERNEL_IMAGES_DIR, MAX_ROTATE_ANGLE
 from config import BOOK_PAGE_SHAPE_LIST
 from config import SHUFA_FILE_DIR
 from util import CHAR2ID_DICT, IGNORABLE_CHARS, IMPORTANT_CHARS
-from config import BOOK_PAGE_IMGS_H, BOOK_PAGE_TAGS_FILE_H
-from config import BOOK_PAGE_IMGS_V, BOOK_PAGE_TAGS_FILE_V
+from config import config_manager
 
 from util import check_or_makedirs
 from img_utils import rotate_PIL_image, find_min_bound_box, adjust_img_and_put_into_background, reverse_image_color
 from noise_util import add_noise
 from ocrodeg import *
-from generate_font_sample import create_mix_ch_handle
+from generate_font_sample import create_mix_ch_handle, create_imgs_ch_handle, create_ttf_ch_handle
 
 
 def check_text_type(text_type):
@@ -42,62 +40,52 @@ def check_text_type(text_type):
 
 
 class generate_text_lines_with_text_handle:
-    def __init__(self, obj_num, shape=None, text_type="horizontal", text='野火烧不尽春风吹又生', char_size=64,
-                 augment=True, fonts_json='/disks/sdb/projs/AncientBooks/data/chars/font_missing.json', fonts_root=None,
-                 bad_font_file='charset/songhei_error_font.txt', experiment_dir='songhei_experiment/',
-                 type_fonts='type/宋黑类字符集.txt', embedding_num=250, resume=70000, charset='charset/charset_xl.txt',
-                 init_num=0, special_type='normal', segment_type='normal'):
-        self.text = Queue()
-        for char in text:
-            self.text.put(char)
-        self.text_type = text_type
-        if shape is None:
-            self.shape = BOOK_PAGE_SHAPE_LIST
-        elif isinstance(shape, tuple) and len(shape) == 2:
-            self.shape = shape
-        else:
-            raise ValueError('shape should be tuple and have length 2')
-        self.obj_num = obj_num
-        self.char_size = char_size
-        self.augment = augment
-        self.generate_font_handle = create_mix_ch_handle(
-            fonts_json=fonts_json,
-            fonts_root=fonts_root,
-            bad_font_file=bad_font_file,
-            experiment_dir=experiment_dir,
-            type_fonts=type_fonts,
-            embedding_num=embedding_num,
-            resume=resume
-        )
-        self.init_num = init_num
-        self.special_type = special_type
-        self.segment_type = segment_type
-        self.charset = set([s.strip() for s in open(charset, 'r', encoding='utf-8')])
+
+    # def __init__(self, obj_num, shape=None, text_type="horizontal", text='野火烧不尽春风吹又生', char_size=64,
+    #              augment=True, fonts_json='/disks/sdb/projs/AncientBooks/data/chars/font_missing.json', fonts_root=None,
+    #              bad_font_file='charset/songhei_error_font.txt', experiment_dir='songhei_experiment/',
+    #              type_fonts='type/宋黑类字符集.txt', embedding_num=250, resume=70000, charset='charset/charset_xl.txt',
+    #              init_num=0, special_type='normal', segment_type='normal'):
+    def __init__(self, config):
+        if config.char_from == 'fontmagic':
+            self.generate_char_handle = create_mix_ch_handle(
+                fonts_json=config.fonts_json,
+                fonts_root=config.fonts_root,
+                bad_font_file=config.bad_font_file,
+                experiment_dir=config.font_magic_experiment,
+                type_fonts=config.type_fonts,
+                embedding_num=config.embedding_num,
+                resume=config.resume
+            )
+        elif config.char_from == 'ttf':
+            self.generate_char_handle = create_ttf_ch_handle(
+                ttf_path=config.ttf_path,
+                default_ttf_path=config.default_ttf_path,
+                char_size=config.char_size,
+                canvas_size=config.canvas_size
+            )
+        elif config.char_from == 'imgs':
+            self.generate_char_handle = create_imgs_ch_handle(
+                config.char_imgs_path
+            )
+        self.config = config
 
     def generate_book_page_with_text(self):
-        text_type = check_text_type(self.text_type)
+        config = self.config
+        orient = config.orient
+        os.makedirs(config.store_imgs, exist_ok=True)
 
-        if text_type == "h":
-            book_page_imgs_dir, book_page_tags_file = BOOK_PAGE_IMGS_H, BOOK_PAGE_TAGS_FILE_H
-        elif text_type == "v":
-            book_page_imgs_dir, book_page_tags_file = BOOK_PAGE_IMGS_V, BOOK_PAGE_TAGS_FILE_V
-        else:
-            raise ValueError('text_type should be horizontal or vertical')
-
-        check_or_makedirs(book_page_imgs_dir)
-
-        with open(book_page_tags_file, "w", encoding="utf-8") as fw:
-            for i in range(self.init_num, self.init_num + self.obj_num):
-                if isinstance(self.shape, list):
-                    shape = random.choice(self.shape)
+        with open(config.store_tags, "w", encoding="utf-8") as fw:
+            for i in range(config.init_num, config.obj_num):
+                if isinstance(config.shape, list):
+                    shape = random.choice(config.shape)
                 else:
-                    shape = self.shape
+                    shape = config.shape
 
-                self.generate_font_handle.set_cur_font()
+                self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
 
                 PIL_page, text_bbox_list, text_list, char_bbox_list, char_list = self.create_book_page_with_text(
-                    shape,
-                    text_type=text_type
+                    shape, text_type=text_type
                 )
 
                 if self.augment:
@@ -142,7 +130,7 @@ class generate_text_lines_with_text_handle:
                 fw.write(img_name + "\t" + json.dumps(image_tags) + "\n")
 
                 if i % 50 == 0:
-                    print(" %d / %d Done" % (i, self.obj_num))
+                    print(" %d / %d Done" % (i, self.config.obj_num))
                     sys.stdout.flush()
 
     def create_book_page_with_text(self, shape, text_type):
@@ -464,7 +452,7 @@ class generate_text_lines_with_text_handle:
                         chinese_char = self.text.get()
                 else:
                     chinese_char = ' '
-            PIL_char_img, flag = self.generate_font_handle.get_mix_character(chinese_char)
+            PIL_char_img, flag = self.generate_char_handle.get_character(chinese_char)
 
         PIL_char_img = PIL_char_img.resize((self.char_size, self.char_size))
 
@@ -572,52 +560,6 @@ class generate_text_lines_with_text_handle:
         return chinese_char, bounding_box, char_box_tail
 
 
-'''
-def draw_single_char(ch, font, canvas_size):
-    img = Image.new("L", (canvas_size * 2, canvas_size * 2), 0)
-    draw = ImageDraw.Draw(img)
-    try:
-        draw.text((10, 10), ch, 255, font=font)
-    except OSError:
-        return img
-    bbox = img.getbbox()
-    if bbox is None:
-        return img
-    l, u, r, d = bbox
-    l = max(0, l - 5)
-    u = max(0, u - 5)
-    r = min(canvas_size * 2 - 1, r + 5)
-    d = min(canvas_size * 2 - 1, d + 5)
-    if l >= r or u >= d:
-        return None
-    img = np.array(img)
-    img = img[u:d, l:r]
-    img = Image.fromarray(img)
-    # img.show()
-    width, height = img.size
-    # Convert PIL.Image to FloatTensor, scale from 0 to 1, 0 = black, 1 = white
-    try:
-        img = transforms.ToTensor()(img)
-    except SystemError:
-        return None
-    img = img.unsqueeze(0)  # 加轴
-    pad_len = int(abs(width - height) / 2)  # 预填充区域的大小
-    # 需要填充区域，如果宽大于高则上下填充，否则左右填充
-    if width > height:
-        fill_area = (0, 0, pad_len, pad_len)
-    else:
-        fill_area = (pad_len, pad_len, 0, 0)
-    # 填充像素常值
-    fill_value = 0
-    img = nn.ConstantPad2d(fill_area, fill_value)(img)
-    # img = nn.ZeroPad2d(m)(img) #直接填0
-    img = img.squeeze(0)  # 去轴
-    img = transforms.ToPILImage()(img)
-    img = img.resize((canvas_size, canvas_size), Image.ANTIALIAS)
-    return img
-'''
-
-
 # 对字体图像做等比例缩放
 def resize_img_by_opencv(np_img, obj_size):
     cur_height, cur_width = np_img.shape[:2]
@@ -641,25 +583,10 @@ def resize_img_by_opencv(np_img, obj_size):
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--obj_num', type=int, required=True)
-    parser.add_argument('--text_type', type=str, default='vertical')
-    parser.add_argument('--text_file', type=str, required=True)
-    parser.add_argument('--char_size', type=int, default=64)
-    parser.add_argument('--augment', action='store_true')
-    parser.add_argument('--fonts_json', type=str, required=True)
-    parser.add_argument('--fonts_root', type=str, default=None)
-    parser.add_argument('--bad_font_file', type=str, default=None)
-    parser.add_argument('--experiment_dir', type=str, required=True)
-    parser.add_argument('--type_fonts', type=str, required=True)
-    parser.add_argument('--embedding_num', type=int, required=True)
-    parser.add_argument('--resume', type=int, required=True)
-    parser.add_argument('--init_num', type=int, default=0)
-    parser.add_argument('--special_type', type=str, default='normal',
-                        choices=['normal', 'split', 'num_end', 'split_num_end'])
-    parser.add_argument('--segment_type', type=str, default='normal',
-                        choices=['normal', 'crowded', 'spacious', 'mixed'])
+    parser.add_argument('--config', type=str, required=True)
     args = parser.parse_args()
-    return args
+    config = args.config
+    return config
 
 
 if __name__ == '__main__':
@@ -667,29 +594,10 @@ if __name__ == '__main__':
     #    text = [line.strip() for line in fp]
     #    text = [re.sub('[，。“”‘’？！《》、（）:：；;·［］【】〈〉]', '', line) for line in text]
     #    text = list(filter(None, text))
-    args = parse_args()
-    pprint(vars(args))
-    if args.text_file == 'cover_charset':
-        text = []
-        with open('./charset/charset_xl.txt', 'r', encoding='utf-8') as fp:
-            raw_charset = [line.strip() for line in fp]
-        for _ in range(50):
-            charset = copy.deepcopy(raw_charset)
-            random.shuffle(charset)
-            text.extend(charset)
-        text = ''.join(text)
-    else:
-        with open(args.text_file, 'r', encoding='utf-8') as fp:
-            text = [line.strip() for line in fp]
-            text = [re.sub('[，。“”‘’？！《》、（）〔〕:：；;·［］【】〈〉<>︻︼︵︶︹︺△　]', '', line) for line in text]
-            text = list(filter(None, text))
-        text = ''.join(text)
+    config = parse_args()
+    config = json.load(open(config, 'r', encoding='utf-8'))
+    pprint(config)
+    config = config_manager(override_dict=config)
 
-    handle = generate_text_lines_with_text_handle(
-        obj_num=args.obj_num, text_type=args.text_type, text=text, char_size=args.char_size, augment=args.augment,
-        fonts_json=args.fonts_json, fonts_root=args.fonts_root,
-        bad_font_file=args.bad_font_file, experiment_dir=args.experiment_dir,
-        type_fonts=args.type_fonts, embedding_num=args.embedding_num, resume=args.resume, init_num=args.init_num,
-        special_type=args.special_type, segment_type=args.segment_type
-    )
+    handle = generate_text_lines_with_text_handle(config)
     handle.generate_book_page_with_text()

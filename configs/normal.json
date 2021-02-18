@@ -1,0 +1,15 @@
+{
+  "obj_num": 10,
+  "text": "raw_text/leishu_sample.txt",
+  "keep_line_break": true,
+  "char_from": "fontmagic",
+  "fonts_json": "/disks/sdb/projs/AncientBooks/data/chars/font_missing2.json",
+  "font_magic_experiment": "fz2_experiment/",
+  "type_fonts": "type/方正第二批.txt",
+  "embedding_num": 250,
+  "resume": 187920,
+  "charset_file": "charset/charset_xl.txt",
+  "init_num": 0,
+  "special_type": [],
+  "segment_type": "normal"
+}
