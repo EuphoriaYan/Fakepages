@@ -85,10 +85,10 @@ class generate_text_lines_with_text_handle:
                 self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
 
                 PIL_page, text_bbox_list, text_list, char_bbox_list, char_list = self.create_book_page_with_text(
-                    shape, text_type=text_type
+                    shape, orient
                 )
 
-                if self.augment:
+                if config.augment:
                     new_text_bbox_list = []
                     new_char_bbox_list = []
                     if random.random() > 0.5:
@@ -125,7 +125,7 @@ class generate_text_lines_with_text_handle:
                               "char_bbox_list": char_bbox_list, "char_list": char_list}
 
                 img_name = "book_page_%d.jpg" % i
-                save_path = os.path.join(book_page_imgs_dir, img_name)
+                save_path = os.path.join(config.store_imgs, img_name)
                 PIL_page.save(save_path, format="jpeg")
                 fw.write(img_name + "\t" + json.dumps(image_tags) + "\n")
 
@@ -133,25 +133,26 @@ class generate_text_lines_with_text_handle:
                     print(" %d / %d Done" % (i, self.config.obj_num))
                     sys.stdout.flush()
 
-    def create_book_page_with_text(self, shape, text_type):
-        text_type = check_text_type(text_type)
+    def create_book_page_with_text(self, shape, orient):
+
+        config = self.config
 
         # 黑色背景书页
         np_page = np.zeros(shape=shape, dtype=np.uint8)
         page_height, page_width = shape
 
         # 随机确定是否画边框线及行线
-        draw = None
         if random.random() < 0.7:
-            PIL_page = Image.fromarray(np_page)
-            draw = ImageDraw.Draw(PIL_page)
+            draw_line = True
+        PIL_page = Image.fromarray(np_page)
+        draw = ImageDraw.Draw(PIL_page)
 
         # 随机确定书页边框
         margin_w = round(random.uniform(0.01, 0.05) * page_width)
         margin_h = round(random.uniform(0.01, 0.05) * page_height)
         margin_line_thickness = random.randint(2, 6)
         line_thickness = round(margin_line_thickness / 2)
-        if draw is not None:
+        if draw_line:
             # 点的坐标格式为(x, y)，不是(y, x)
             draw.rectangle([(margin_w, margin_h), (page_width - 1 - margin_w, page_height - 1 - margin_h)],
                            fill=None, outline="white", width=margin_line_thickness)
@@ -164,7 +165,7 @@ class generate_text_lines_with_text_handle:
         char_bbox_records_list = []
         char_records_list = []
 
-        if text_type == "h":  # 横向排列
+        if orient == 'horizontal':  # 横向排列
 
             # 随机确定文本的行数
             rows_num = random.randint(6, 10)
@@ -195,7 +196,7 @@ class generate_text_lines_with_text_handle:
                 char_bbox_records_list.extend(char_bbox_list)
                 char_records_list.extend(char_list)
 
-        else:  # 纵向排列
+        elif orient == 'vertical':  # 纵向排列
 
             # 随机决定文本的列数
             # cols_num = random.randint(6, 10)
@@ -214,13 +215,13 @@ class generate_text_lines_with_text_handle:
                 np_page = np.array(PIL_page, dtype=np.uint8)
 
             # 随机决定字符间距占列距的比例
-            if self.segment_type == 'normal':
+            if config.segment_type == 'normal':
                 char_spacing = (random.uniform(0.0, 0.2), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
-            elif self.segment_type == 'crowded':
+            elif config.segment_type == 'crowded':
                 char_spacing = (random.uniform(-0.1, 0.1), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
-            elif self.segment_type == 'spacious':
+            elif config.segment_type == 'spacious':
                 char_spacing = (random.uniform(0.3, 0.6), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
-            elif self.segment_type == 'mixed':
+            elif config.segment_type == 'mixed':
                 rand_num = random.random()
                 if rand_num > 0.5:  # 50% crowded
                     char_spacing = (random.uniform(-0.1, 0.1), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
@@ -228,15 +229,29 @@ class generate_text_lines_with_text_handle:
                     char_spacing = (random.uniform(0.3, 0.6), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
                 else:  # 30% normal
                     char_spacing = (random.uniform(0.0, 0.2), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+            else:
+                raise ValueError
 
             # 逐列生成汉字，最右边为第一列
             for i in range(len(xs) - 1, 0, -1):
                 x1, x2 = xs[i - 1] + 1, xs[i] - 1
                 y = margin_h + int(random.uniform(0.0, 1) * margin_line_thickness)
                 col_length = page_height - y - margin_h
-                _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
-                    x1, x2, y, col_length, np_page, char_spacing
-                )
+                if config['line_type'] == 'mixed':
+                    _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
+                        x1, x2, y, col_length, np_page, char_spacing
+                    )
+                elif config['line_type'] == 'single':
+                    _, text_bbox, text, char_bbox = self.generate_one_col_chars_with_text(
+                        x1, x2, y, col_length, np_page, char_spacing
+                    )
+                    text_bbox_list = [text_bbox]
+                    text_list = [text]
+                    char_bbox_list = char_bbox
+                    char_list = text
+                else:
+                    raise ValueError
+
                 text_bbox_records_list.extend(text_bbox_list)
                 text_records_list.extend(text_list)
                 char_bbox_records_list.extend(char_bbox_list)
@@ -320,7 +335,7 @@ class generate_text_lines_with_text_handle:
             else:
                 # 随机决定接下来的字串长度（这是大约数值，实际可能比它小,也可能比它大）
                 length = random.randint(col_width, min(remaining_len, col_width * 10))
-                if self.special_type == 'split' or self.special_type == 'split_num_end':
+                if 'split' in self.config.special_type:
                     y += length
                 else:
                     y, text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2 = self.generate_two_cols_chars_with_text(
