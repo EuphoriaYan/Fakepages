@@ -1,6 +1,7 @@
 {
   "obj_num": 10,
   "text": "raw_text/leishu_sample.txt",
+  "delete_symbol": true,
   "keep_line_break": true,
   "orient": "vertical",
   "char_size": 250,

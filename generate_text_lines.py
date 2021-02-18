@@ -15,9 +15,9 @@ from config import TWO_TEXT_LINE_IMGS_H, TWO_TEXT_LINE_TAGS_FILE_H
 from config import TWO_TEXT_LINE_IMGS_V, TWO_TEXT_LINE_TAGS_FILE_V
 from config import MIX_TEXT_LINE_IMGS_H, MIX_TEXT_LINE_TAGS_FILE_H
 from config import MIX_TEXT_LINE_IMGS_V, MIX_TEXT_LINE_TAGS_FILE_V
-from config import FONT_FILE_DIR, EXTERNEL_IMAGES_DIR, MAX_ROTATE_ANGLE
+from config import FONT_FILE_DIR, EXTERNEL_IMAGES_DIR
 from config import SHUFA_FILE_DIR
-from util import CHAR2ID_DICT, IGNORABLE_CHARS, IMPORTANT_CHARS
+from util import CHAR2ID_DICT, IMPORTANT_CHARS
 
 from util import check_or_makedirs
 from img_utils import rotate_PIL_image, find_min_bound_box, adjust_img_and_put_into_background, reverse_image_color

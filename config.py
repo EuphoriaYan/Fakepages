@@ -64,6 +64,7 @@ class config_manager:
         self.shape = BOOK_PAGE_SHAPE_LIST  # 页面形状（宽*高）
         self.text_from = 'text'  # 文本来源，[text|dict|random]，dict必须配合config_type='dict'
         self.text = None  # 生成的文字
+        self.delete_symbol = True
         self.keep_line_break = False  # 是否保留\n
         self.orient = 'vertical'  # 生成的方向
         self.char_size = 64  # 单字生成时的大小，默认为64

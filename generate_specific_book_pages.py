@@ -17,12 +17,9 @@ from torchvision import transforms
 from torch import nn
 import copy
 
-from config import BOOK_PAGE_SHAPE_LIST
-from config import SHUFA_FILE_DIR
-from util import CHAR2ID_DICT, IGNORABLE_CHARS, IMPORTANT_CHARS
+from util import IMPORTANT_CHARS
 from config import config_manager
 
-from util import check_or_makedirs
 from img_utils import rotate_PIL_image, find_min_bound_box, adjust_img_and_put_into_background, reverse_image_color
 from noise_util import add_noise
 from ocrodeg import *
@@ -42,10 +39,11 @@ def check_text_type(text_type):
 class generate_text_lines_with_text_handle:
 
     # def __init__(self, obj_num, shape=None, text_type="horizontal", text='野火烧不尽春风吹又生', char_size=64,
-    #              augment=True, fonts_json='/disks/sdb/projs/AncientBooks/data/chars/font_missing.json', fonts_root=None,
-    #              bad_font_file='charset/songhei_error_font.txt', experiment_dir='songhei_experiment/',
-    #              type_fonts='type/宋黑类字符集.txt', embedding_num=250, resume=70000, charset='charset/charset_xl.txt',
-    #              init_num=0, special_type='normal', segment_type='normal'):
+    #              augment=True, fonts_json='/disks/sdb/projs/AncientBooks/data/chars/font_missing.json',
+    #              fonts_root=None, bad_font_file='charset/songhei_error_font.txt',
+    #              experiment_dir='songhei_experiment/', type_fonts='type/宋黑类字符集.txt', embedding_num=250,
+    #              resume=70000, charset='charset/charset_xl.txt', init_num=0, special_type='normal',
+    #              segment_type='normal'):
     def __init__(self, config):
         if config.char_from == 'fontmagic':
             self.generate_char_handle = create_mix_ch_handle(
@@ -64,7 +62,7 @@ class generate_text_lines_with_text_handle:
                 char_size=config.char_size,
                 canvas_size=config.canvas_size
             )
-        elif config.char_from == 'imgs':
+        elif config.char_from == 'imgs':  # TODO need fix
             self.generate_char_handle = create_imgs_ch_handle(
                 config.char_imgs_path
             )
@@ -411,7 +409,8 @@ class generate_text_lines_with_text_handle:
             else:
                 last_char = False
             chinese_char, bounding_box, y_tail = self.generate_char_img_into_unclosed_box_with_text(
-                np_background, x1=x1, y1=y, x2=x2, y2=None, char_spacing=char_spacing, first_char=first_char, last_char=last_char
+                np_background, x1=x1, y1=y, x2=x2, y2=None, char_spacing=char_spacing, first_char=first_char,
+                last_char=last_char
             )
             if chinese_char is None:
                 break
@@ -495,7 +494,8 @@ class generate_text_lines_with_text_handle:
             )
             start_height = (config.char_size * config.use_bigger_canvas_scale - char_img_height) // 2
             start_width = (config.char_size * config.use_bigger_canvas_scale - char_img_width) // 2
-            new_np_char_img[start_height:start_height + char_img_height, start_width:start_width + char_img_width] |= np_char_img
+            new_np_char_img[start_height:start_height + char_img_height,
+            start_width:start_width + char_img_width] |= np_char_img
             cv2.resize(new_np_char_img, (config.char_size, config.char_size), dst=np_char_img)
 
         if x2 is None:  # 文本横向排列

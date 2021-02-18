@@ -58,29 +58,10 @@ def chinese_labels_dict(charset_size='m'):
     return id2char_dict, char2id_dict, num_chars
 
 
-def ignorable_chars():
-    chars = set()
-    with open(IGNORABLE_CHARS_FILE, "r", encoding="utf-8") as fr:
-        for line in fr:
-            chinese_char = line.strip()[0]
-            chars.add(chinese_char)
-    return chars
-
-
-def important_chars():
-    chars = set()
-    with open(IMPORTANT_CHARS_FILE, "r", encoding="utf-8") as fr:
-        for line in fr:
-            chinese_char = line.strip()[0]
-            chars.add(chinese_char)
-    return chars
-
-
 # General tasks
 ID2CHAR_DICT, CHAR2ID_DICT, NUM_CHARS = chinese_labels_dict()
 BLANK_CHAR = ID2CHAR_DICT[0]
-IGNORABLE_CHARS = ignorable_chars()
-IMPORTANT_CHARS = important_chars()
+IMPORTANT_CHARS = set('，。“”‘’？！《》、（）〔〕:：；;·［］【】〈〉<>︻︼︵︶︹︺△')
 
 
 def traditional_chars():
@@ -217,7 +198,6 @@ def draw_single_char(ch, font, canvas_size):
     img = transforms.ToPILImage()(img)
     img = img.resize((canvas_size, canvas_size), Image.ANTIALIAS)
     return img
-
 
 
 if __name__ == '__main__':
