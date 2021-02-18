@@ -477,6 +477,23 @@ class generate_text_lines_with_text_handle:
         # 转为numpy格式
         np_char_img = np.array(PIL_char_img, dtype=np.uint8)
 
+
+        if config.symbol_on_char:
+            for symbol, symbol_prob in zip(config.symbol_use, config.symbol_prob):
+                if random.random() > symbol_prob:
+                    pass
+                symbol_file = config.symbol_dict[symbol]
+                symbol_img = Image.open(symbol_file).convert('L')
+                symbol_img = symbol_img.resize(config.char_size, config.char_size)
+                symbol_arr = np.array(symbol_img)
+                if symbol == 'reverse':
+                    symbol_arr = reverse_image_color(np_img=symbol_arr)
+                    np_char_img |= symbol_arr
+                    np_char_img = reverse_image_color(np_img=np_char_img)
+                else:
+                    np_char_img |= symbol_arr
+
+
         if chinese_char in IMPORTANT_CHARS or chinese_char == ' ':
             pass
         else:
@@ -486,6 +503,8 @@ class generate_text_lines_with_text_handle:
 
         char_img_height, char_img_width = np_char_img.shape[:2]
 
+
+
         if config.use_bigger_canvas:
             new_np_char_img = np.zeros(
                 (config.char_size * config.use_bigger_canvas_scale,
@@ -494,9 +513,8 @@ class generate_text_lines_with_text_handle:
             )
             start_height = (config.char_size * config.use_bigger_canvas_scale - char_img_height) // 2
             start_width = (config.char_size * config.use_bigger_canvas_scale - char_img_width) // 2
-            new_np_char_img[start_height:start_height + char_img_height,
-            start_width:start_width + char_img_width] |= np_char_img
-            cv2.resize(new_np_char_img, (config.char_size, config.char_size), dst=np_char_img)
+            new_np_char_img[start_height:start_height + char_img_height, start_width:start_width + char_img_width] |= np_char_img
+            np_char_img = cv2.resize(new_np_char_img, (config.char_size, config.char_size))
 
         if x2 is None:  # 文本横向排列
             row_h = y2 - y1 + 1
@@ -586,7 +604,7 @@ class generate_text_lines_with_text_handle:
 
 
 # 对字体图像做等比例缩放
-def resize_img_by_opencv(np_img, obj_size):
+def resize_img_by_opencv(np_img, obj_size, make_border=False):
     cur_height, cur_width = np_img.shape[:2]
     obj_width, obj_height = obj_size
 
@@ -601,6 +619,10 @@ def resize_img_by_opencv(np_img, obj_size):
         interpolation = cv2.INTER_AREA
     else:
         interpolation = cv2.INTER_CUBIC
+    if make_border:
+        border_type = cv2.BORDER_CONSTANT
+        np_img = cv2.copyMakeBorder(np_img, 0, 0, cur_width // 2, 0, border_type, value=0)
+
     resized_np_img = cv2.resize(np_img, dsize=(obj_width, obj_height), interpolation=interpolation)
 
     return resized_np_img
@@ -615,10 +637,6 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    # with open(r'..\corpus\cleaned\leishu.txt', 'r', encoding='utf-8') as fp:
-    #    text = [line.strip() for line in fp]
-    #    text = [re.sub('[，。“”‘’？！《》、（）:：；;·［］【】〈〉]', '', line) for line in text]
-    #    text = list(filter(None, text))
     config = parse_args()
     config = json.load(open(config, 'r', encoding='utf-8'))
     pprint(config)

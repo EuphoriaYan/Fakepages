@@ -73,8 +73,18 @@ class config_manager:
 
         self.symbol_on_char = False  # 在字图上再加符号
         self.symbol_path = 'charset/symbol'  # 符号图的位置
-        self.symbol_use = ['wave', 'reverse', 'underline']  # 使用哪些符号[wave|reverse|underline|emphasis]
+        self.symbol_use = ['wave', 'reverse', 'underline']  # 使用哪些符号，详见下方dict
         self.symbol_prob = [0.1, 0.01, 0.1]  # 符号出现的概率，和symbol_use同样长度
+        self.symbol_dict = {'underline': os.path.join(self.symbol_path, '下划线_细直线.PNG'),
+                            'reverse': os.path.join(self.symbol_path, '印章.PNG'),
+                            'wave': os.path.join(self.symbol_path, '下划线_波浪.PNG'),
+                            'two_circles': os.path.join(self.symbol_path, 'two_circles.png'),
+                            'one_circle_black': os.path.join(self.symbol_path, 'one_circle_black.png'),
+                            'one_circle_white': os.path.join(self.symbol_path, 'one_circle_white.png'),
+                            'big_circle': os.path.join(self.symbol_path, 'big_circle.png'),
+                            'comma': os.path.join(self.symbol_path, '逗号.PNG'),
+                            'period': os.path.join(self.symbol_path, '句号.PNG'),}
+
 
         self.use_bigger_canvas = False  # 将字图放在一个更大的画框里，用于永乐大典等宽松排版
         self.use_bigger_canvas_scale = 2  # 画框的放大倍数
