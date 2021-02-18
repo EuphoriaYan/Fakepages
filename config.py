@@ -111,19 +111,22 @@ class config_manager:
     def init_config(self, override_dict):
         for key, value in override_dict.items():
             setattr(self, key, value)
-        if self.text_from == 'text':
-            self.init_text(self.text, self.keep_line_break)
-        elif self.text_from == 'dict':
-            pass  # TODO fix dict
-        elif self.text_from == 'random':
-            self.init_text('cover_charset', self.keep_line_break)
-        else:
-            raise ValueError
+        self.init_text()
         with open(self.charset_file, 'r', encoding='utf-8') as charset_file:
             charset = set(charset_file.readline().strip())
             self.charset = charset
 
-    def init_text(self, text_file, keep_line_break):
+    def init_text(self):
+        if self.text_from == 'text':
+            self.get_text_queue(self.text, self.keep_line_break)
+        elif self.text_from == 'dict':
+            pass  # TODO fix dict
+        elif self.text_from == 'random':
+            self.get_text_queue('cover_charset', self.keep_line_break)
+        else:
+            raise ValueError
+
+    def get_text_queue(self, text_file, keep_line_break):
         if text_file == 'cover_charset':
             text = []
             with open('./charset/charset_xl.txt', 'r', encoding='utf-8') as fp:

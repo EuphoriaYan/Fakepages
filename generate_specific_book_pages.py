@@ -144,6 +144,8 @@ class generate_text_lines_with_text_handle:
         # 随机确定是否画边框线及行线
         if random.random() < 0.7:
             draw_line = True
+        else:
+            draw_line = False
         PIL_page = Image.fromarray(np_page)
         draw = ImageDraw.Draw(PIL_page)
 
@@ -175,7 +177,7 @@ class generate_text_lines_with_text_handle:
             ys = [margin_h + round(i * row_h) for i in range(rows_num)] + [page_height - 1 - margin_h]
 
             # 画行线，第一条线和最后一条线是边框线，不需要画
-            if draw is not None:
+            if draw_line:
                 for y in ys[1:-1]:
                     draw.line([(margin_w, y), (page_width - 1 - margin_w, y)], fill="white", width=line_thickness)
                 np_page = np.array(PIL_page, dtype=np.uint8)
@@ -199,17 +201,15 @@ class generate_text_lines_with_text_handle:
         elif orient == 'vertical':  # 纵向排列
 
             # 随机决定文本的列数
-            # cols_num = random.randint(6, 10)
-            # cols_num = random.randint(18, 23)
-            # cols_num = random.randint(14, 19)
-            cols_num = random.randint(int(page_width / page_height * 8), int(page_width / page_height * 13))
+            cols_num = random.randint(int(page_width / page_height * config.line_num[0]),
+                                      int(page_width / page_height * config.line_num[1]))
             col_w = (page_width - 2 * margin_w) / cols_num
 
             # x-coordinate划分列
             xs = [margin_w + round(i * col_w) for i in range(cols_num)] + [page_width - 1 - margin_w, ]
 
             # 画列线，第一条线和最后一条线是边缘线，不需要画
-            if draw is not None:
+            if draw_line:
                 for x in xs[1:-1]:
                     draw.line([(x, margin_h), (x, page_height - 1 - margin_h)], fill="white", width=line_thickness)
                 np_page = np.array(PIL_page, dtype=np.uint8)
@@ -237,11 +237,11 @@ class generate_text_lines_with_text_handle:
                 x1, x2 = xs[i - 1] + 1, xs[i] - 1
                 y = margin_h + int(random.uniform(0.0, 1) * margin_line_thickness)
                 col_length = page_height - y - margin_h
-                if config['line_type'] == 'mixed':
+                if config.line_type == 'mixed':
                     _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
                         x1, x2, y, col_length, np_page, char_spacing
                     )
-                elif config['line_type'] == 'single':
+                elif config.line_type == 'single':
                     _, text_bbox, text, char_bbox = self.generate_one_col_chars_with_text(
                         x1, x2, y, col_length, np_page, char_spacing
                     )
@@ -260,11 +260,6 @@ class generate_text_lines_with_text_handle:
         # 将黑底白字转换为白底黑字
         np_page = reverse_image_color(np_img=np_page)
         PIL_page = Image.fromarray(np_page)
-
-        # print(text_bbox_list)
-        # print(len(text_bbox_list))
-        # PIL_page.show()
-
         return PIL_page, text_bbox_records_list, text_records_list, char_bbox_records_list, char_records_list
 
     def generate_mix_rows_chars_with_text(self, x, y1, y2, row_length, np_background, char_spacing):
@@ -290,7 +285,7 @@ class generate_text_lines_with_text_handle:
                 char_bbox_list.extend(char_bbox)
                 char_list.extend(text)
             else:
-                if self.special_type == 'split' or self.special_type == 'split_num_end':
+                if 'split' in config.special_type:
                     x += length
                 else:
                     x, text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2 = self.generate_two_rows_chars_with_text(
@@ -448,7 +443,7 @@ class generate_text_lines_with_text_handle:
 
     def generate_char_img_into_unclosed_box_with_text(self, np_background, x1, y1, x2=None, y2=None,
                                                       char_spacing=(0.05, 0.05), first_char=False, last_char=False):
-
+        config = self.config
         if x2 is None and y2 is None:
             raise ValueError("There is one and only one None in (x2, y2).")
         if x2 is not None and y2 is not None:
@@ -457,25 +452,28 @@ class generate_text_lines_with_text_handle:
         chinese_char = ' '
         PIL_char_img = None
         while PIL_char_img is None:
-            if (self.special_type == 'num_end' or self.special_type == 'split_num_end') and last_char:
+            if last_char and 'num_end' in config.special_type:
                 chinese_char = random.choice(['一', '二', '三'])
             else:
+                if config.text.empty():
+                    config.init_text()
                 # 生成白底黑字的字，包含文字
-                if not self.text.empty():
-                    chinese_char = self.text.get()
-                    while chinese_char not in self.charset:
-                        chinese_char = self.text.get()
+                if not config.text.empty():
+                    chinese_char = config.text.get()
+                    while chinese_char not in config.charset:
+                        chinese_char = config.text.get()
                 else:
                     chinese_char = ' '
             PIL_char_img, flag = self.generate_char_handle.get_character(chinese_char)
 
-        PIL_char_img = PIL_char_img.resize((self.char_size, self.char_size))
+        PIL_char_img = PIL_char_img.resize((config.char_size, config.char_size))
 
         # 随机决定是否对汉字图片进行旋转，以及旋转的角度
         if random.random() < 0.35:
             PIL_char_img = rotate_PIL_image(
                 PIL_char_img,
-                rotate_angle=random.randint(-MAX_ROTATE_ANGLE, MAX_ROTATE_ANGLE))
+                rotate_angle=random.randint(-config.max_rotate_angle, config.max_rotate_angle)
+            )
 
         # 转为numpy格式
         np_char_img = np.array(PIL_char_img, dtype=np.uint8)
@@ -488,6 +486,17 @@ class generate_text_lines_with_text_handle:
             np_char_img = np_char_img[top:low + 1, left:right + 1]
 
         char_img_height, char_img_width = np_char_img.shape[:2]
+
+        if config.use_bigger_canvas:
+            new_np_char_img = np.zeros(
+                (config.char_size * config.use_bigger_canvas_scale,
+                 config.char_size * config.use_bigger_canvas_scale),
+                dtype=np.uint8
+            )
+            start_height = (config.char_size * config.use_bigger_canvas_scale - char_img_height) // 2
+            start_width = (config.char_size * config.use_bigger_canvas_scale - char_img_width) // 2
+            new_np_char_img[start_height:start_height + char_img_height, start_width:start_width + char_img_width] |= np_char_img
+            cv2.resize(new_np_char_img, (config.char_size, config.char_size), dst=np_char_img)
 
         if x2 is None:  # 文本横向排列
             row_h = y2 - y1 + 1
@@ -531,6 +540,7 @@ class generate_text_lines_with_text_handle:
                 # 对于宽高相差不大的字，宽度撑满，高度随意
                 box_h = round(char_img_height * box_w / char_img_width)
                 np_char_img = resize_img_by_opencv(np_char_img, obj_size=(box_w, box_h))
+
             box_y2 = box_y1 + box_h - 1
 
         # 将生成的汉字图片放入背景图片
