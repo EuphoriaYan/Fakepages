@@ -6,9 +6,14 @@ import sys
 import random
 
 from util import CHAR2ID_DICT, BLANK_CHAR, TRADITION_CHARS
-from config import CHAR_IMG_SIZE, NUM_IMAGES_PER_FONT
 from config import FONT_FILE_DIR, EXTERNEL_IMAGES_DIR
 from config import CHAR_IMGS_DIR
+
+from config import config_manager
+
+con = config_manager()
+CHAR_IMG_SIZE = con.char_size
+NUM_IMAGES_PER_FONT = con.obj_num
 
 from util import remove_then_makedirs
 from img_utils import get_standard_image, get_augmented_image

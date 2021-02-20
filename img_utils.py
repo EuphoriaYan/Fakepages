@@ -9,9 +9,11 @@ import math
 import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
+from config import config_manager
 
-from config import CHAR_IMG_SIZE, MAX_ROTATE_ANGLE
-
+con = config_manager()
+CHAR_IMG_SIZE = con.char_size
+MAX_ROTATE_ANGLE = con.max_rotate_angle
 
 # 先生成比目标size稍大的图片，图片处理(旋转裁剪)之后，再缩放至目标大小
 # 如果直接生成目标大小的图片，生成的字会更小，裁剪之后还需要再次放大
