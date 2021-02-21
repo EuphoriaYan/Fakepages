@@ -10,7 +10,7 @@
   "symbol_on_char": false,
   "use_bigger_canvas": false,
   "augment": true,
-  "char_from": "fontmagic",
+  "char_from": "ttf",
   "fonts_json": "/disks/sdb/projs/AncientBooks/data/chars/font_missing2.json",
   "font_magic_experiment": "fz2_experiment/",
   "type_fonts": "type/方正第二批.txt",

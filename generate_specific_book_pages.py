@@ -459,8 +459,10 @@ class generate_text_lines_with_text_handle:
                 # 生成白底黑字的字，包含文字
                 if not config.text.empty():
                     chinese_char = config.text.get()
+                    print(config.charset)
                     while chinese_char not in config.charset:
                         chinese_char = config.text.get()
+                    print('hao')
                 else:
                     chinese_char = ' '
             PIL_char_img, flag = self.generate_char_handle.get_character(chinese_char)
@@ -644,3 +646,5 @@ if __name__ == '__main__':
 
     handle = generate_text_lines_with_text_handle(config)
     handle.generate_book_page_with_text()
+
+    print('Done')

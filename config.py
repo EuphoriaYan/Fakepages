@@ -92,7 +92,7 @@ class config_manager:
 
         self.augment = True  # 添加augment
 
-        self.char_from = 'fontmagic'  # 单字来源，[fontmagic|ttf|imgs]
+        self.char_from = 'ttf'  # 单字来源，[fontmagic|ttf|imgs]
         self.fonts_json = None  # 生成的fonts_json文件
         self.fonts_root = None  # 如果fonts_json的path和真实的path不符，填入真实path的前缀
         self.bad_font_file = None  # fonts里哪些是不能使用font magic的
@@ -104,7 +104,7 @@ class config_manager:
         self.char_imgs_path = SHUFA_FILE_DIR  # 如果使用字图，字图在哪里
 
         self.ttf_path = FONT_FILE_DIR  # 如果使用ttf，ttf文件在哪里
-        self.ttf_deafult_path = DEFAULT_FONT_FILE_DIR  # 如果使用ttf/字图且遇到不可绘制文字，默认的ttf文件
+        self.default_ttf_path = DEFAULT_FONT_FILE_DIR  # 如果使用ttf/字图且遇到不可绘制文字，默认的ttf文件
 
         self.line_type = 'mixed'  # 单行或混合单双行，或为字典特殊设计的行结构 [mixed|single|dict]
         self.line_num = (8, 13)
@@ -125,7 +125,7 @@ class config_manager:
             setattr(self, key, value)
         self.init_text()
         with open(self.charset_file, 'r', encoding='utf-8') as charset_file:
-            charset = set(charset_file.readline().strip())
+            charset = set([s.strip() for s in charset_file.readlines()])
             self.charset = charset
 
     def init_text(self):
