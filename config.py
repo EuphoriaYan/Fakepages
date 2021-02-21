@@ -152,7 +152,7 @@ class config_manager:
             with open(text_file, 'r', encoding='utf-8') as fp:
                 if not keep_line_break:
                     text = [line.strip() for line in fp]
-                text = [re.sub('[，。“”‘’？！《》、（）〔〕:：；;·［］【】〈〉<>︻︼︵︶︹︺△　]', '', line) for line in text]
+                text = [re.sub('[，。“”‘’？！《》、（）〔〕:：；;·［］【】〈〉<>︻︼︵︶︹︺△　]', '', line) for line in fp]
                 text = list(filter(None, text))
             text = ''.join(text)
         self.text = Queue()

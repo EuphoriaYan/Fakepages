@@ -70,7 +70,7 @@ class generate_text_lines_with_text_handle:
 
     def generate_book_page_with_text(self):
         config = self.config
-        orient = config.orient
+        orient = config.orient  # 确定排列方向（横or竖）
         os.makedirs(config.store_imgs, exist_ok=True)
 
         with open(config.store_tags, "w", encoding="utf-8") as fw:
