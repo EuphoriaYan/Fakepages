@@ -489,27 +489,7 @@ class generate_text_lines_with_text_handle:
         char_img_height, char_img_width = np_char_img.shape[:2]
 
         if config.use_bigger_canvas:
-
-            border_type = cv2.BORDER_CONSTANT
-            resized_np_char_img = cv2.copyMakeBorder(np_char_img,
-                                                config.char_size // config.use_bigger_canvas_scale_top,
-                                                config.char_size // config.use_bigger_canvas_scale_bottom,
-                                                config.char_size // config.use_bigger_canvas_scale_left,
-                                                config.char_size // config.use_bigger_canvas_scale_right,
-                                                border_type,
-                                                value = [0,0,0]
-                                                )
-
-            # new_np_char_img = np.zeros(
-            #     (config.char_size * config.use_bigger_canvas_scale_h,
-            #      config.char_size * config.use_bigger_canvas_scale_w),
-            #     dtype=np.uint8
-            # )
-            # start_height = (config.char_size * config.use_bigger_canvas_scale_h - char_img_height) // 2
-            # start_width = (config.char_size * config.use_bigger_canvas_scale_w - char_img_width) // 2
-            # new_np_char_img[start_height:start_height + char_img_height, start_width:start_width + char_img_width] |= np_char_img
-
-            np_char_img = cv2.resize(resized_np_char_img, (config.char_size, config.char_size))
+            np_char_img = bigger_canvas(np_char_img)
 
         if config.symbol_on_char:
             for symbol, symbol_prob in zip(config.symbol_use, config.symbol_prob):
@@ -521,11 +501,17 @@ class generate_text_lines_with_text_handle:
                 symbol_img = symbol_img.resize((symbol_width, symbol_height))
                 symbol_arr = np.array(symbol_img)
                 if symbol == 'reverse':
+                    if config.use_bigger_canvas:
+                        symbol_arr = bigger_canvas(symbol_arr)
+                    np_char_img = bigger_canvas(np_char_img, shrink=0.5)
                     symbol_arr = reverse_image_color(np_img=symbol_arr)
                     np_char_img |= symbol_arr
                     np_char_img = reverse_image_color(np_img=np_char_img)
                 else:
                     np_char_img |= symbol_arr
+
+                if symbol in ["one_circle_white","one_circle_black", "two_circles"]:
+                    break
 
         if x2 is None:  # 文本横向排列
             row_h = y2 - y1 + 1
@@ -646,6 +632,27 @@ def parse_args():
     config = args.config
     return config
 
+def bigger_canvas(np_char_img, shrink = 1):
+    half = int(0.5 * config.char_size)
+
+    top = int(config.char_size * config.use_bigger_canvas_scale_top)
+    bottom = int(config.char_size * config.use_bigger_canvas_scale_bottom)
+    left = int(config.char_size * config.use_bigger_canvas_scale_left)
+    right = int(config.char_size * config.use_bigger_canvas_scale_right)
+
+    if shrink != 1:
+        top = int(shrink * (top + half))
+        bottom = int(shrink * (bottom + half))
+        left = int(shrink * (left + half))
+        right = int(shrink * (right + half))
+
+    border_type = cv2.BORDER_CONSTANT
+    resized_np_char_img = cv2.copyMakeBorder(np_char_img,
+                                             top, bottom, left, right,
+                                             border_type,
+                                             value = [0,0,0]
+                                             )
+    return cv2.resize(resized_np_char_img, (config.char_size, config.char_size))
 
 if __name__ == '__main__':
     config = parse_args()
