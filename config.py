@@ -88,7 +88,9 @@ class config_manager:
 
 
         self.use_bigger_canvas = False  # 将字图放在一个更大的画框里，用于永乐大典等宽松排版
-        self.use_bigger_canvas_scale = 2  # 画框的放大倍数
+        # self.use_bigger_canvas_scale = 2  # 画框的放大倍数
+        self.use_bigger_canvas_scale_h = 2  # 画框的放大倍数
+        self.use_bigger_canvas_scale_w = 2  # 画框的放大倍数
 
         self.augment = True  # 添加augment
 
