@@ -69,6 +69,8 @@ class config_manager:
         self.keep_line_break = False  # 是否保留\n
         self.orient = 'vertical'  # 生成的方向
         self.char_size = 64  # 单字生成时的大小，默认为64
+        self.char_size_h = 64  # 单字生成时的高
+        self.char_size_w = 64  # 单字生成时的宽
         self.canvas_size = 64  # 画布大小，等于或微大于char_size即可，需要同步修改
         self.max_rotate_angle = 5  # 最大的旋转角度
 
@@ -89,8 +91,11 @@ class config_manager:
 
         self.use_bigger_canvas = False  # 将字图放在一个更大的画框里，用于永乐大典等宽松排版
         # self.use_bigger_canvas_scale = 2  # 画框的放大倍数
-        self.use_bigger_canvas_scale_h = 2  # 画框的放大倍数
-        self.use_bigger_canvas_scale_w = 2  # 画框的放大倍数
+        self.use_bigger_canvas_scale_top = 2  # 画框的上沿
+        self.use_bigger_canvas_scale_bottom = 2  # 画框的下沿
+        self.use_bigger_canvas_scale_left = 2  # 画框的左沿
+        self.use_bigger_canvas_scale_right = 2  # 画框的右沿
+
 
         self.augment = True  # 添加augment
 
