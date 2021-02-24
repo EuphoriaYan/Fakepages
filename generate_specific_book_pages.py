@@ -168,7 +168,8 @@ class generate_text_lines_with_text_handle:
         if orient == 'horizontal':  # 横向排列
 
             # 随机确定文本的行数
-            rows_num = random.randint(6, 10)
+            rows_num = random.randint(int(page_width / page_width * config.line_num[0]),
+                                      int(page_width / page_width * config.line_num[1]))
             row_h = (page_height - 2 * margin_h) / rows_num
 
             # y-coordinate划分行
@@ -180,8 +181,23 @@ class generate_text_lines_with_text_handle:
                     draw.line([(margin_w, y), (page_width - 1 - margin_w, y)], fill="white", width=line_thickness)
                 np_page = np.array(PIL_page, dtype=np.uint8)
 
-            # 随机决定字符间距占行距的比例
-            char_spacing = (random.uniform(0.02, 0.15), random.uniform(0.0, 0.2))  # (高方向, 宽方向)
+            # 随机决定字符间距占列距的比例
+            if config.segment_type == 'normal':
+                char_spacing = (random.uniform(0.0, 0.2), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+            elif config.segment_type == 'crowded':
+                char_spacing = (random.uniform(-0.1, 0.1), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+            elif config.segment_type == 'spacious':
+                char_spacing = (random.uniform(0.3, 0.6), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+            elif config.segment_type == 'mixed':
+                rand_num = random.random()
+                if rand_num > 0.5:  # 50% crowded
+                    char_spacing = (random.uniform(-0.1, 0.1), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+                elif rand_num < 0.2:  # 20% spacious
+                    char_spacing = (random.uniform(0.3, 0.6), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+                else:  # 30% normal
+                    char_spacing = (random.uniform(0.0, 0.2), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+            else:
+                raise ValueError
 
             # 逐行生成汉字
             for i in range(len(ys) - 1):
@@ -274,7 +290,7 @@ class generate_text_lines_with_text_handle:
             # 随机决定接下来的字串长度（这是大约数值，实际可能比它小,也可能比它大）
             length = random.randint(row_height, remaining_len)
             flag += 1
-            if flag % 2 == 1:
+            if flag % 2 == 1 or config.line_type == 'single':
                 x, text_bbox, text, char_bbox = self.generate_one_row_chars_with_text(
                     x, y1, y2, length, np_background, char_spacing
                 )
@@ -510,7 +526,7 @@ class generate_text_lines_with_text_handle:
                 else:
                     np_char_img |= symbol_arr
 
-                if symbol in ["one_circle_white","one_circle_black", "two_circles"]:
+                if symbol in ["one_circle_white","one_circle_black", "two_circles", "underline", "wave"]:
                     break
 
         if x2 is None:  # 文本横向排列
