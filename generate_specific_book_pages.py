@@ -364,7 +364,7 @@ class generate_text_lines_with_text_handle:
 
         return y, text_bbox_list, text_list, char_bbox_list, char_list
 
-    def generate_one_row_chars_with_text(self, x, y1, y2, length, np_background, char_spacing):
+    def generate_one_row_chars_with_text(self, x, y1, y2, length, np_background, char_spacing, reshape='single'):
         """
         :return: x, text_bbox, text
         """
@@ -379,7 +379,7 @@ class generate_text_lines_with_text_handle:
             else:
                 last_char = False
             chinese_char, bounding_box, x_tail = self.generate_char_img_into_unclosed_box_with_text(
-                np_background, x1=x, y1=y1, x2=None, y2=y2, char_spacing=char_spacing, last_char=last_char
+                np_background, x1=x, y1=y1, x2=None, y2=y2, char_spacing=char_spacing, last_char=last_char, reshape=reshape
             )
 
             char_and_box_list.append((chinese_char, bounding_box))
@@ -402,13 +402,14 @@ class generate_text_lines_with_text_handle:
 
         # x, text_bbox, text
         x_1, text1_bbox, text1, char_bbox1 = self.generate_one_row_chars_with_text(
-            x, y1, mid_y, length, np_background, char_spacing)
+            x, y1, mid_y, length, np_background, char_spacing, reshape='double')
         x_2, text2_bbox, text2, char_bbox2 = self.generate_one_row_chars_with_text(
-            x, mid_y + 1, y2, length, np_background, char_spacing)
+            x, mid_y + 1, y2, length, np_background, char_spacing, reshape='double')
 
         return max(x_1, x_2), text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2
 
-    def generate_one_col_chars_with_text(self, x1, x2, y, length, np_background, char_spacing):
+    def generate_one_col_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, reshape = 'single'):
+
         # 记录下生成的汉字及其bounding-box
         char_and_box_list = []
 
@@ -426,7 +427,7 @@ class generate_text_lines_with_text_handle:
                 last_char = False
             chinese_char, bounding_box, y_tail = self.generate_char_img_into_unclosed_box_with_text(
                 np_background, x1=x1, y1=y, x2=x2, y2=None, char_spacing=char_spacing, first_char=first_char,
-                last_char=last_char
+                last_char=last_char, reshape=reshape
             )
             if chinese_char is None:
                 break
@@ -450,14 +451,14 @@ class generate_text_lines_with_text_handle:
         mid_x = x1 + round(col_width / 2)
 
         y_1, text1_bbox, text1, char_bbox1 = self.generate_one_col_chars_with_text(
-            mid_x + 1, x2, y, length, np_background, char_spacing)
+            mid_x + 1, x2, y, length, np_background, char_spacing, reshape='double')
         y_2, text2_bbox, text2, char_bbox2 = self.generate_one_col_chars_with_text(
-            x1, mid_x, y, length, np_background, char_spacing)
+            x1, mid_x, y, length, np_background, char_spacing, reshape='double')
 
         return max(y_1, y_2), text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2
 
     def generate_char_img_into_unclosed_box_with_text(self, np_background, x1, y1, x2=None, y2=None,
-                                                      char_spacing=(0.05, 0.05), first_char=False, last_char=False):
+                                                      char_spacing=(0.05, 0.05), first_char=False, last_char=False, reshape=''):
         config = self.config
         if x2 is None and y2 is None:
             raise ValueError("There is one and only one None in (x2, y2).")
@@ -467,21 +468,29 @@ class generate_text_lines_with_text_handle:
         chinese_char = ' '
         PIL_char_img = None
         while PIL_char_img is None:
-            if last_char and 'num_end' in config.special_type:
-                chinese_char = random.choice(['一', '二', '三'])
-            else:
-                if config.text.empty():
-                    config.init_text()
-                # 生成白底黑字的字，包含文字
-                if not config.text.empty():
-                    chinese_char = config.text.get()
-                    # print(config.charset)
-                    while chinese_char not in config.charset:
-                        chinese_char = config.text.get()
-                    # print('hao')
+            if config.symbol_next_char:
+                for symbol_next, symbol_next_prob in zip(config.symbol_next_use, config.symbol_next_prob):
+                    if random.random() > symbol_next_prob:
+                        continue
+                    symbol_next_file = self.symbol_next_dict(symbol_next)
+                    PIL_char_img = Image.open(symbol_next_file).convert('L')
+                    break
+            if PIL_char_img is None:
+                if last_char and 'num_end' in config.special_type:
+                    chinese_char = random.choice(['一', '二', '三'])
                 else:
-                    chinese_char = ' '
-            PIL_char_img, flag = self.generate_char_handle.get_character(chinese_char)
+                    if config.text.empty():
+                        config.init_text()
+                    # 生成白底黑字的字，包含文字
+                    if not config.text.empty():
+                        chinese_char = config.text.get()
+                        # print(config.charset)
+                        while chinese_char not in config.charset:
+                            chinese_char = config.text.get()
+                        # print('hao')
+                    else:
+                        chinese_char = ' '
+                PIL_char_img, flag = self.generate_char_handle.get_character(chinese_char)
 
         PIL_char_img = PIL_char_img.resize((config.char_size, config.char_size))
 
@@ -507,6 +516,7 @@ class generate_text_lines_with_text_handle:
         if config.use_bigger_canvas:
             np_char_img = bigger_canvas(np_char_img)
 
+        # 添加与字图重叠的符号
         if config.symbol_on_char:
             for symbol, symbol_prob in zip(config.symbol_use, config.symbol_prob):
                 if random.random() > symbol_prob:
@@ -541,14 +551,24 @@ class generate_text_lines_with_text_handle:
             box_y2 = y2 - char_spacing_h
             box_h = box_y2 - box_y1 + 1
 
+            # 是否需要将字拉伸为长方形
+            stretch = 1.0
+            if config.char_reshape:
+                if config.char_reshape_line in [reshape, 'both']:
+                    if reshape == 'single':
+                        stretch = config.char_single_line_reshape_stretch
+                    else:  # reshape == 'double'
+                        stretch = config.char_double_line_reshape_stretch
+
             if char_img_height * 1.4 < char_img_width:
                 # 对于“一”这种高度很小、宽度很大的字，应该生成正方形的字图片
-                box_w = box_h
-                np_char_img = adjust_img_and_put_into_background(np_char_img, background_size=box_h)
+                box_w = int(box_h * stretch)
+                np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_w=box_w, background_size_h=box_h)
             else:
                 # 对于宽高相差不大的字，高度撑满，宽度随意
-                box_w = round(char_img_width * box_h / char_img_height)
+                box_w = int(round(char_img_width * box_h / char_img_height) * stretch)
                 np_char_img = resize_img_by_opencv(np_char_img, obj_size=(box_w, box_h))
+
             box_x2 = box_x1 + box_w - 1
 
         else:  # y2 is None, 文本纵向排列
@@ -563,13 +583,22 @@ class generate_text_lines_with_text_handle:
                 box_y1 = y1 + char_spacing_h
             box_w = box_x2 - box_x1 + 1
 
+            # 是否需要将字拉伸为长方形
+            stretch = 1.0
+            if config.char_reshape:
+                if config.char_reshape_line in [reshape, 'both']:
+                    if reshape == 'single':
+                        stretch = config.char_single_line_reshape_stretch
+                    else:  # reshape == 'double'
+                        stretch = config.char_double_line_reshape_stretch
+
             if char_img_width * 1.4 < char_img_height:
                 # 对于“卜”这种高度很大、宽度很小的字，应该生成正方形的字图片
-                box_h = box_w
-                np_char_img = adjust_img_and_put_into_background(np_char_img, background_size=box_w)
+                box_h = int(box_w * stretch)
+                np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_w=box_w, background_size_h=box_h)
             else:
                 # 对于宽高相差不大的字，宽度撑满，高度随意
-                box_h = round(char_img_height * box_w / char_img_width)
+                box_h = int(round(char_img_height * box_w / char_img_width) * stretch)
                 np_char_img = resize_img_by_opencv(np_char_img, obj_size=(box_w, box_h))
 
             box_y2 = box_y1 + box_h - 1
@@ -615,6 +644,14 @@ class generate_text_lines_with_text_handle:
 
         return chinese_char, bounding_box, char_box_tail
 
+    def symbol_next_dict(self,symbol_name):
+        config = self.config
+
+        if symbol_name in config.symbol_number_next_char:
+            name = symbol_name + str(random.randint(1, 10)) + '.PNG'
+        else:
+            name = symbol_name + '.png'
+        return os.path.join(config.symbol_path, name)
 
 # 对字体图像做等比例缩放
 def resize_img_by_opencv(np_img, obj_size, make_border=False):

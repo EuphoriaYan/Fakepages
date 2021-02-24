@@ -86,6 +86,19 @@ class config_manager:
                             'comma': os.path.join(self.symbol_path, '逗号.PNG'),
                             'period': os.path.join(self.symbol_path, '句号.PNG'),}
 
+        self.symbol_next_char = False  # 不与字图重叠的符号
+        self.symbol_next_use = ['big_circle']  # 使用哪些符号
+        self.symbol_next_prob = [0.1]  # 符号出现的概率，和symbol_next_use同样长度
+        self.symbol_next_dict ={}
+        self.symbol_number_next_char = ['chinese_number_with_circle_reverse',  # 带序号的特殊符号
+                                        'chinese_number_with_circle',
+                                        'number_with_circle_reverse',
+                                        'number_with_circle']
+
+        self.char_reshape = False  # 将文字横向或纵向拉长（单行or列）
+        self.char_reshape_line = 'single'  # 选择reshape的行or列类型 [single|double|both]
+        self.char_single_line_reshape_stretch = 1  # 拉长的倍数（若文字纵向排列，则为文字高的倍数；横向为宽的倍数）
+        self.char_double_line_reshape_stretch = 1  # 拉长的倍数（若文字纵向排列，则为文字高的倍数；横向为宽的倍数）
 
         self.use_bigger_canvas = False  # 将字图放在一个更大的画框里，用于永乐大典等宽松排版
         # self.use_bigger_canvas_scale = 2  # 画框的放大倍数
@@ -112,7 +125,7 @@ class config_manager:
         self.default_ttf_path = DEFAULT_FONT_FILE_DIR  # 如果使用ttf/字图且遇到不可绘制文字，默认的ttf文件
 
         self.line_type = 'mixed'  # 单行或混合单双行，或为字典特殊设计的行结构 [mixed|single|dict]
-        self.line_num = (8, 13)
+        self.line_num = (10, 15)
 
         self.charset_file = 'charset/charset_xl.txt'  # 字符集
         self.init_num = 0  # 生成的初始序号，用于中断后继续生成

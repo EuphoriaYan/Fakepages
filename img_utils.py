@@ -201,8 +201,9 @@ def find_min_bound_box(np_img):
 
 
 # 对字体图像做等比例缩放
-def resize_image_keep_ratio(np_img, background_size=CHAR_IMG_SIZE):
-    obj_height = obj_width = background_size
+def resize_image_keep_ratio(np_img, background_size_h=CHAR_IMG_SIZE, background_size_w=CHAR_IMG_SIZE):
+    obj_height = background_size_h
+    obj_width = background_size_w
     cur_height, cur_width = np_img.shape[:2]
 
     width_ratio = obj_width / cur_width
@@ -244,15 +245,15 @@ def put_img_in_center(small_np_img, large_np_img):
     return large_np_img
 
 
-def adjust_img_and_put_into_background(np_img, background_size=CHAR_IMG_SIZE):
-    obj_height = obj_width = background_size
-
+def adjust_img_and_put_into_background(np_img, background_size_h=CHAR_IMG_SIZE, background_size_w=CHAR_IMG_SIZE):
+    obj_height = background_size_h
+    obj_width = background_size_w
     if len(np_img.shape) > 2:
         pixel_dim = np_img.shape[2]
     else:
         pixel_dim = None
 
-    adjusted_np_img = resize_image_keep_ratio(np_img, background_size=background_size)
+    adjusted_np_img = resize_image_keep_ratio(np_img, background_size_h=background_size_h, background_size_w=background_size_w)
 
     adjusted_height, adjusted_width = adjusted_np_img.shape[:2]
     if adjusted_width == obj_width and adjusted_height == obj_height:
