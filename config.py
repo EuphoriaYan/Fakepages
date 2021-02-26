@@ -72,6 +72,9 @@ class config_manager:
         self.canvas_size = 64  # 画布大小，等于或微大于char_size即可，需要同步修改
         self.max_rotate_angle = 5  # 最大的旋转角度
 
+        self.full_line = True  # 是否填满整行or整列
+        self.line_length = 1  # 最小整行长度
+
         self.symbol_on_char = False  # 在字图上再加符号
         self.symbol_path = 'charset/symbol'  # 符号图的位置
         self.symbol_use = ['wave', 'reverse', 'underline']  # 使用哪些符号，详见下方dict

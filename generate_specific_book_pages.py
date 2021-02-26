@@ -203,7 +203,11 @@ class generate_text_lines_with_text_handle:
             for i in range(len(ys) - 1):
                 y1, y2 = ys[i] + 1, ys[i + 1] - 1
                 x = margin_w + int(random.uniform(0.0, 1) * margin_line_thickness)
-                row_length = page_width - x - margin_w
+                if config.full_line:
+                    row_length = page_height - y - margin_h
+                else:
+                    line_length = random.uniform(config.line_length, 1)
+                    row_length = int(line_length * page_height) - y - margin_h
                 _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_rows_chars_with_text(
                     x, y1, y2, row_length, np_page, char_spacing
                 )
@@ -250,7 +254,11 @@ class generate_text_lines_with_text_handle:
             for i in range(len(xs) - 1, 0, -1):
                 x1, x2 = xs[i - 1] + 1, xs[i] - 1
                 y = margin_h + int(random.uniform(0.0, 1) * margin_line_thickness)
-                col_length = page_height - y - margin_h
+                if config.full_line:
+                    col_length = page_height - y - margin_h
+                else:
+                    line_length = random.uniform(config.line_length, 1)
+                    col_length = int(line_length * page_height) - y - margin_h
                 if config.line_type == 'mixed':
                     _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
                         x1, x2, y, col_length, np_page, char_spacing
