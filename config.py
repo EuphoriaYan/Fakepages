@@ -81,7 +81,8 @@ class config_manager:
         self.limit_min_length_double = 1  # 双列or行的最少字数
 
         self.start_at_single = 0.6  # 每行起始为单行的概率
-        self.end_at_single = False  # 凡遇单行，则换行
+        self.end_at_single = False  # 单行换行
+        self.end_at_double = False  # 双行换行
 
         self.symbol_on_char = False  # 在字图上再加符号
         self.symbol_path = 'charset/symbol'  # 符号图的位置
@@ -104,7 +105,13 @@ class config_manager:
         self.symbol_number_next_char = ['chinese_number_with_circle_reverse',  # 带序号的特殊符号
                                         'chinese_number_with_circle',
                                         'number_with_circle_reverse',
-                                        'number_with_circle']
+                                        'number_with_circle'
+                                        ]
+        self.symbol_position_specified = False  # 是否将符号加在特定位置
+        self.symbol_at_left = False  # 将符号加靠左侧部分
+        self.symbol_at_right = False  # 将符号加靠右侧部分
+        self.symbol_at_top = False  # 将符号加靠上侧部分
+        self.symbol_at_bottom = False  # 将符号加靠下侧部分
 
         self.char_reshape = False  # 将文字横向或纵向拉长（单行or列）
         self.char_reshape_line = 'single'  # 选择reshape的行or列类型 [single|double|both]

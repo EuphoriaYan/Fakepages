@@ -260,8 +260,18 @@ class generate_text_lines_with_text_handle:
                     line_length = random.uniform(config.line_length, 1)
                     col_length = int(line_length * page_height) - y - margin_h
                 if config.line_type == 'mixed':
+                    symbol_position = True
+                    if config.symbol_position_specified:
+                        min_edge = 0
+                        max_edge = cols_num
+                        if config.symbol_at_left:
+                            min_edge += 3
+                        if config.symbol_at_right:
+                            max_edge -= 3
+                        if i <=max_edge and i >= min_edge:
+                            symbol_position = False
                     _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
-                        x1, x2, y, col_length, np_page, char_spacing
+                        x1, x2, y, col_length, np_page, char_spacing, symbol_position=symbol_position
                     )
                 elif config.line_type == 'single':
                     _, text_bbox, text, char_bbox = self.generate_one_col_chars_with_text(
@@ -335,7 +345,7 @@ class generate_text_lines_with_text_handle:
 
         return x, text_bbox_list, text_list, char_bbox_list, char_list
 
-    def generate_mix_cols_chars_with_text(self, x1, x2, y, col_length, np_background, char_spacing):
+    def generate_mix_cols_chars_with_text(self, x1, x2, y, col_length, np_background, char_spacing, symbol_position=True):
         col_width = x2 - x1 + 1
         y_start = y
 
@@ -357,7 +367,7 @@ class generate_text_lines_with_text_handle:
                 if config.end_at_single and flag == 1:
                     col_length = 0
                 y, text_bbox, text, char_bbox = self.generate_one_col_chars_with_text(
-                    x1, x2, y, length, np_background, char_spacing
+                    x1, x2, y, length, np_background, char_spacing, symbol_position=symbol_position
                 )
                 text_bbox_list.append(text_bbox)
                 text_list.append(text)
@@ -369,11 +379,15 @@ class generate_text_lines_with_text_handle:
                 min_length = col_width * config.limit_min_length_double
                 length = min(remaining_len, random.randint(min_length, max_length))
 
+                # 该行结束，换行
+                if config.end_at_double:
+                    col_length = 0
+
                 if 'split' in self.config.special_type:
                     y += length
                 else:
                     y, text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2 = self.generate_two_cols_chars_with_text(
-                        x1, x2, y, length, np_background, char_spacing
+                        x1, x2, y, length, np_background, char_spacing, symbol_position=symbol_position
                     )
                     text_bbox_list.append(text1_bbox)
                     text_list.append(text1)
@@ -433,8 +447,8 @@ class generate_text_lines_with_text_handle:
 
         return max(x_1, x_2), text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2
 
-    def generate_one_col_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, reshape = 'single'):
-
+    def generate_one_col_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, reshape='single',
+                                         symbol_position=True):
         # 记录下生成的汉字及其bounding-box
         char_and_box_list = []
 
@@ -452,7 +466,7 @@ class generate_text_lines_with_text_handle:
                 last_char = False
             chinese_char, bounding_box, y_tail = self.generate_char_img_into_unclosed_box_with_text(
                 np_background, x1=x1, y1=y, x2=x2, y2=None, char_spacing=char_spacing, first_char=first_char,
-                last_char=last_char, reshape=reshape
+                last_char=last_char, reshape=reshape, symbol_position=symbol_position
             )
             if chinese_char is None:
                 break
@@ -471,19 +485,20 @@ class generate_text_lines_with_text_handle:
 
         return y, text_bbox, text, char_bbox
 
-    def generate_two_cols_chars_with_text(self, x1, x2, y, length, np_background, char_spacing):
+    def generate_two_cols_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, symbol_position=True):
         col_width = x2 - x1 + 1
         mid_x = x1 + round(col_width / 2)
 
         y_1, text1_bbox, text1, char_bbox1 = self.generate_one_col_chars_with_text(
-            mid_x + 1, x2, y, length, np_background, char_spacing, reshape='double')
+            mid_x + 1, x2, y, length, np_background, char_spacing, reshape='double', symbol_position=symbol_position)
         y_2, text2_bbox, text2, char_bbox2 = self.generate_one_col_chars_with_text(
-            x1, mid_x, y, length, np_background, char_spacing, reshape='double')
+            x1, mid_x, y, length, np_background, char_spacing, reshape='double', symbol_position=symbol_position)
 
         return max(y_1, y_2), text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2
 
     def generate_char_img_into_unclosed_box_with_text(self, np_background, x1, y1, x2=None, y2=None,
-                                                      char_spacing=(0.05, 0.05), first_char=False, last_char=False, reshape=''):
+                                                      char_spacing=(0.05, 0.05), first_char=False, last_char=False,
+                                                      reshape='', symbol_position=True):
         config = self.config
         if x2 is None and y2 is None:
             raise ValueError("There is one and only one None in (x2, y2).")
@@ -493,7 +508,7 @@ class generate_text_lines_with_text_handle:
         chinese_char = ' '
         PIL_char_img = None
         while PIL_char_img is None:
-            if config.symbol_next_char:
+            if config.symbol_next_char and symbol_position:
                 for symbol_next, symbol_next_prob in zip(config.symbol_next_use, config.symbol_next_prob):
                     if random.random() > symbol_next_prob:
                         continue
