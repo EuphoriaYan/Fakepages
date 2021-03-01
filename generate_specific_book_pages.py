@@ -261,7 +261,7 @@ class generate_text_lines_with_text_handle:
                     col_length = int(line_length * page_height) - y - margin_h
                 if config.line_type == 'mixed':
                     symbol_position = True
-                    if config.symbol_position_specified:
+                    if config.symbol_position_specified:  # 用于判断左右端是否随机插入blank
                         min_edge = 0
                         max_edge = cols_num
                         if config.symbol_at_left:
@@ -270,6 +270,23 @@ class generate_text_lines_with_text_handle:
                             max_edge -= 3
                         if i <=max_edge and i >= min_edge:
                             symbol_position = False
+                    # 判断目前该行在整页的哪个部分
+                    if i <= 3:
+                        line_part = 'left'
+                    elif i <= cols_num - 3:
+                        line_part = 'center'
+                    else:
+                        line_part = 'right'
+
+                    blank_length = int(config.blank_length * col_length)
+                    if config.blank_at_top:
+                        if line_part in config.blank_at_top_lines:
+                            y += blank_length
+                            col_length -= blank_length
+                    if config.blank_at_bottom:
+                        if line_part in config.blank_at_bottom_lines:
+                            col_length -= blank_length
+
                     _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
                         x1, x2, y, col_length, np_page, char_spacing, symbol_position=symbol_position
                     )

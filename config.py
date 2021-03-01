@@ -110,8 +110,12 @@ class config_manager:
         self.symbol_position_specified = False  # 是否将符号加在特定位置
         self.symbol_at_left = False  # 将符号加靠左侧部分
         self.symbol_at_right = False  # 将符号加靠右侧部分
-        self.symbol_at_top = False  # 将符号加靠上侧部分
-        self.symbol_at_bottom = False  # 将符号加靠下侧部分
+
+        self.blank_at_top = False  # 上侧部分留白
+        self.blank_at_bottom = False  # 下侧部分留白
+        self.blank_at_top_lines = ['left', 'center', 'right']  # 上侧留白，在左中右哪几行
+        self.blank_at_bottom_lines = ['left', 'center', 'right']  # 下侧留白，在左中右哪几行
+        self.blank_length = 0  # 留白所占比例
 
         self.char_reshape = False  # 将文字横向或纵向拉长（单行or列）
         self.char_reshape_line = 'single'  # 选择reshape的行or列类型 [single|double|both]
