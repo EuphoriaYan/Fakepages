@@ -297,10 +297,18 @@ class generate_text_lines_with_text_handle:
         while remaining_len >= row_height:
             # 随机决定接下来的字串长度（这是大约数值，实际可能比它小,也可能比它大）
             length = random.randint(row_height, remaining_len)
+            if config.limit_length_single != 0:
+                length_single = random.randint(row_height, row_height * config.limit_length_single)
+            else:
+                length_single = length
+            if config.limit_length_double != 0:
+                length_double = random.randint(row_height, row_height * config.limit_length_double)
+            else:
+                length_double = length
             flag += 1
             if flag % 2 == 1 or config.line_type == 'single':
                 x, text_bbox, text, char_bbox = self.generate_one_row_chars_with_text(
-                    x, y1, y2, length, np_background, char_spacing
+                    x, y1, y2, length_single, np_background, char_spacing
                 )
                 text_bbox_list.append(text_bbox)
                 text_list.append(text)
@@ -308,10 +316,10 @@ class generate_text_lines_with_text_handle:
                 char_list.extend(text)
             else:
                 if 'split' in config.special_type:
-                    x += length
+                    x += length_double
                 else:
                     x, text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2 = self.generate_two_rows_chars_with_text(
-                        x, y1, y2, length, np_background, char_spacing
+                        x, y1, y2, length_double, np_background, char_spacing
                     )
                     text_bbox_list.append(text1_bbox)
                     text_list.append(text1)
@@ -335,13 +343,19 @@ class generate_text_lines_with_text_handle:
         text_list = []
         char_bbox_list = []
         char_list = []
-        flag = 0 if random.random() < 0.6 else 1  # 以单行字串还是双行字串开始
+        flag = 0 if random.random() < config.start_at_single else 1  # 以单行字串还是双行字串开始
         remaining_len = col_length
         while remaining_len >= col_width:
             flag += 1
             if flag % 2 == 1:
                 # 随机决定接下来的字串长度（这是大约数值，实际可能比它小,也可能比它大）
-                length = random.randint(col_width, min(remaining_len, col_width * 20))
+                max_length = col_width * config.limit_max_length_single
+                min_length = col_width * config.limit_min_length_single
+                length = min(remaining_len, random.randint(min_length, max_length))
+
+                # 该行结束，换行
+                if config.end_at_single and flag == 1:
+                    col_length = 0
                 y, text_bbox, text, char_bbox = self.generate_one_col_chars_with_text(
                     x1, x2, y, length, np_background, char_spacing
                 )
@@ -351,7 +365,10 @@ class generate_text_lines_with_text_handle:
                 char_list.extend(text)
             else:
                 # 随机决定接下来的字串长度（这是大约数值，实际可能比它小,也可能比它大）
-                length = random.randint(col_width, min(remaining_len, col_width * 10))
+                max_length = col_width * config.limit_max_length_double
+                min_length = col_width * config.limit_min_length_double
+                length = min(remaining_len, random.randint(min_length, max_length))
+
                 if 'split' in self.config.special_type:
                     y += length
                 else:
