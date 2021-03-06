@@ -254,39 +254,49 @@ class generate_text_lines_with_text_handle:
             for i in range(len(xs) - 1, 0, -1):
                 x1, x2 = xs[i - 1] + 1, xs[i] - 1
                 y = margin_h + int(random.uniform(0.0, 1) * margin_line_thickness)
-                if config.full_line:
-                    col_length = page_height - y - margin_h
-                else:
-                    line_length = random.uniform(config.line_length, 1)
-                    col_length = int(line_length * page_height) - y - margin_h
-                if config.line_type == 'mixed':
-                    symbol_position = True
-                    if config.symbol_position_specified:  # 用于判断左右端是否随机插入blank
-                        min_edge = 0
-                        max_edge = cols_num
-                        if config.symbol_at_left:
-                            min_edge += 3
-                        if config.symbol_at_right:
-                            max_edge -= 3
-                        if i <=max_edge and i >= min_edge:
-                            symbol_position = False
-                    # 判断目前该行在整页的哪个部分
-                    if i <= 3:
-                        line_part = 'left'
-                    elif i <= cols_num - 3:
-                        line_part = 'center'
-                    else:
-                        line_part = 'right'
+                col_length = page_height - y - margin_h
 
-                    blank_length = int(config.blank_length * col_length)
-                    if config.blank_at_top:
-                        if line_part in config.blank_at_top_lines:
+                symbol_position = True
+                if config.symbol_position_specified:  # 用于判断左右端是否随机插入blank
+                    min_edge = 0
+                    max_edge = cols_num
+                    if config.symbol_at_left:
+                        min_edge += 3
+                    if config.symbol_at_right:
+                        max_edge -= 3
+                    if i <=max_edge and i >= min_edge:
+                        symbol_position = False
+                # 判断目前该行在整页的哪个部分
+                if i <= 3:
+                    line_part = 'left'
+                elif i <= cols_num - 3:
+                    line_part = 'center'
+                else:
+                    line_part = 'right'
+
+                blank_length = int(config.blank_length * page_height - y - margin_h)
+                if config.blank_at_top:
+                    if line_part in config.blank_at_top_lines:
+                        y += blank_length
+                        col_length -= blank_length
+                    # 自定义留白
+                    elif 'defined' in config.blank_at_top_lines:
+                        if i >= cols_num * config.blank_at_top_defined[0] and i <= cols_num * config.blank_at_top_defined[1]:
                             y += blank_length
                             col_length -= blank_length
-                    if config.blank_at_bottom:
-                        if line_part in config.blank_at_bottom_lines:
+                if config.blank_at_bottom:
+                    if line_part in config.blank_at_bottom_lines:
+                        col_length -= blank_length
+                    # 自定义留白
+                    elif 'defined' in config.blank_at_bottom_lines:
+                        if i >= cols_num * config.blank_at_bottom_defined[0] and i <= cols_num * config.blank_at_bottom_defined[1]:
                             col_length -= blank_length
 
+                # 不填满整行
+                if not config.full_line:
+                    line_length = random.uniform(config.line_length, 1)
+                    col_length = int(line_length * col_length)
+                if config.line_type == 'mixed':
                     _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
                         x1, x2, y, col_length, np_page, char_spacing, symbol_position=symbol_position
                     )
@@ -305,6 +315,41 @@ class generate_text_lines_with_text_handle:
                 text_records_list.extend(text_list)
                 char_bbox_records_list.extend(char_bbox_list)
                 char_records_list.extend(char_list)
+
+        # 向页面里添加图片
+        if config.chart_in_page:
+            for chart_position in config.chart_position_x_y:
+                chart_name = config.chart_use[random.randint(0, 8)]
+                chart_file = self.chart_dict(chart_name)
+                PIL_chart_img = Image.open(chart_file).convert('L')
+
+                chart_width = int(config.chart_size_to_page_w * (page_width - margin_w * 2))
+                chart_height = int(config.chart_size_to_page_h * (page_height - margin_h * 2))
+                PIL_chart_img = PIL_chart_img.resize((chart_width, chart_height))
+                # 转为numpy格式
+                np_chart_img = np.array(PIL_chart_img, dtype=np.uint8)
+                # 黑白反色
+                np_chart_img = reverse_image_color(np_img=np_chart_img)
+                PIL_chart_img = Image.fromarray(np_chart_img)
+
+                # 随机旋转
+                if random.random() < 0.35:
+                    PIL_chart_img = rotate_PIL_image(
+                        PIL_chart_img,
+                        rotate_angle=random.randint(-config.max_rotate_angle, config.max_rotate_angle)
+                    )
+
+                # 转为numpy格式
+                np_chart_img = np.array(PIL_chart_img, dtype=np.uint8)
+
+                chart_x, chart_y = chart_position
+                chart_x1 = int((page_width - margin_w * 2) * chart_x) + margin_w
+                chart_y1 = int((page_height - margin_h * 2) * chart_y) + margin_h
+                chart_x2 = chart_x1 + chart_width
+                chart_y2 = chart_y1 + chart_height
+
+                # 将图片插入页面
+                np_page[chart_y1:chart_y2, chart_x1:chart_x2] = np_chart_img
 
         # 将黑底白字转换为白底黑字
         np_page = reverse_image_color(np_img=np_page)
@@ -504,7 +549,7 @@ class generate_text_lines_with_text_handle:
 
     def generate_two_cols_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, symbol_position=True):
         col_width = x2 - x1 + 1
-        mid_x = x1 + round(col_width / 2)
+        mid_x = x1 + round(col_width / random.uniform(1.7, 2.3))
 
         y_1, text1_bbox, text1, char_bbox1 = self.generate_one_col_chars_with_text(
             mid_x + 1, x2, y, length, np_background, char_spacing, reshape='double', symbol_position=symbol_position)
@@ -709,6 +754,13 @@ class generate_text_lines_with_text_handle:
         else:
             name = symbol_name + '.png'
         return os.path.join(config.symbol_path, name)
+
+    def chart_dict(self, chart_name):
+        config = self.config
+
+        num = random.randint(1, config.chart_max_num[chart_name])
+        name = chart_name + '- (' + str(num) + ').jpg'
+        return os.path.join(config.chart_path, name)
 
 # 对字体图像做等比例缩放
 def resize_img_by_opencv(np_img, obj_size, make_border=False):

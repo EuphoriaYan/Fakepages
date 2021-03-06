@@ -84,6 +84,16 @@ class config_manager:
         self.end_at_single = False  # 单行换行
         self.end_at_double = False  # 双行换行
 
+        self.chart_in_page = False  # 添加图片
+        self.chart_path = 'charset/chart'  # 图片位置
+        self.chart_use = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I']  # 图片名的首字母
+        self.chart_max_num = {'A': 125, 'B': 102, 'C': 40, 'D': 107, 'E': 26,   # 不同首字母图片的序号上限
+                              'F': 102, 'G': 100, 'H': 74, 'I': 93}
+        self.chart_size_to_page_h = 0.5  # 图片高 占页面的比例
+        self.chart_size_to_page_w = 0.5  # 图片宽 占页面的比例
+        self.chart_position_x_y = [(0, 0), (0.5, 0)]  # 图片位置（比例）
+
+
         self.symbol_on_char = False  # 在字图上再加符号
         self.symbol_path = 'charset/symbol'  # 符号图的位置
         self.symbol_use = ['wave', 'reverse', 'underline']  # 使用哪些符号，详见下方dict
@@ -113,8 +123,10 @@ class config_manager:
 
         self.blank_at_top = False  # 上侧部分留白
         self.blank_at_bottom = False  # 下侧部分留白
-        self.blank_at_top_lines = ['left', 'center', 'right']  # 上侧留白，在左中右哪几行
-        self.blank_at_bottom_lines = ['left', 'center', 'right']  # 下侧留白，在左中右哪几行
+        self.blank_at_top_lines = ['left', 'center', 'right']  # 上侧留白，left|center|right|defined
+        self.blank_at_bottom_lines = ['left', 'center', 'right']  # 下侧留白，left|center|right|defined
+        self.blank_at_top_defined = (0, 1)  # 自定义留白范围
+        self.blank_at_bottom_defined = (0, 1)  # 自定义留白范围
         self.blank_length = 0  # 留白所占比例
 
         self.char_reshape = False  # 将文字横向或纵向拉长（单行or列）
@@ -128,7 +140,6 @@ class config_manager:
         self.use_bigger_canvas_scale_bottom = 0  # 画框的下沿
         self.use_bigger_canvas_scale_left = 0  # 画框的左沿
         self.use_bigger_canvas_scale_right = 0  # 画框的右沿
-
 
         self.augment = True  # 添加augment
 
