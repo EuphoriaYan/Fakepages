@@ -587,11 +587,11 @@ class generate_text_lines_with_text_handle:
                     if not config.text.empty():
                         chinese_char = config.text.get()
                         # print(config.charset)
-                        while chinese_char not in config.charset:
-                            chinese_char = config.text.get()
+                    while chinese_char not in config.charset:
+                        if config.text.empty():
+                            config.init_text()
+                        chinese_char = config.text.get()
                         # print('hao')
-                    else:
-                        chinese_char = ' '
                 PIL_char_img, flag = self.generate_char_handle.get_character(chinese_char)
 
         PIL_char_img = PIL_char_img.resize((config.char_size, config.char_size))

@@ -62,9 +62,9 @@ class config_manager:
 
         self.obj_num = 10  # 生成数量
         self.shape = BOOK_PAGE_SHAPE_LIST  # 页面形状（宽*高）
-        self.text_from = 'text'  # 文本来源，[text|dict|random]，dict必须配合config_type='dict'
-        # self.text = None  # 生成的文字
-        self.text ='./raw_text/leishu_sample.txt'
+        self.text_from = 'dict'  # 文本来源，[text|dict|random]，dict必须配合config_type='dict'
+        self.text = None  # 生成的文字
+        self.text_dict = 'raw_text/leishu_sample.txt'  # 生成文字的目录
         self.delete_symbol = True
         self.keep_line_break = False  # 是否保留\n
         self.orient = 'vertical'  # 生成的方向
@@ -183,7 +183,7 @@ class config_manager:
         if self.text_from == 'text':
             self.get_text_queue(self.text, self.keep_line_break)
         elif self.text_from == 'dict':
-            pass  # TODO fix dict
+            self.get_text_queue(self.text_dict, self.keep_line_break)
         elif self.text_from == 'random':
             self.get_text_queue('cover_charset', self.keep_line_break)
         else:
