@@ -135,6 +135,8 @@ class config_manager:
         self.char_double_line_reshape_stretch = 1  # 拉长的倍数（若文字纵向排列，则为文字高的倍数；横向为宽的倍数）
 
         self.use_bigger_canvas = False  # 将字图放在一个更大的画框里，用于永乐大典等宽松排版
+        self.use_bigger_canvas_single = True  # 单行放大
+        self.use_bigger_canvas_double = True  # 双批放大
         # self.use_bigger_canvas_scale = 2  # 画框的放大倍数
         self.use_bigger_canvas_scale_top = 0  # 画框的上沿
         self.use_bigger_canvas_scale_bottom = 0  # 画框的下沿
@@ -159,6 +161,10 @@ class config_manager:
 
         self.line_type = 'mixed'  # 单行或混合单双行，或为字典特殊设计的行结构 [mixed|single|dict]
         self.line_num = (10, 15)
+
+        self.region_num = (1, 1)
+        self.region_thickness = 10
+        self.region_draw_line = 'no' # 是否画分区线，画单线还是双线（no|single|double|mix）
 
         self.charset_file = 'charset/charset_xl.txt'  # 字符集
         self.init_num = 0  # 生成的初始序号，用于中断后继续生成

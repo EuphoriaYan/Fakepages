@@ -250,71 +250,109 @@ class generate_text_lines_with_text_handle:
             else:
                 raise ValueError
 
-            # 逐列生成汉字，最右边为第一列
-            for i in range(len(xs) - 1, 0, -1):
-                x1, x2 = xs[i - 1] + 1, xs[i] - 1
-                y = margin_h + int(random.uniform(0.0, 1) * margin_line_thickness)
-                col_length = page_height - y - margin_h
+            # 汉字上下分区
+            region_num = random.randint(config.region_num[0], config.region_num[1])
+            rn = 0
+            surplus_height = page_height - 2 * margin_h
+            while rn < region_num:
 
-                symbol_position = True
-                if config.symbol_position_specified:  # 用于判断左右端是否随机插入blank
-                    min_edge = 0
-                    max_edge = cols_num
-                    if config.symbol_at_left:
-                        min_edge += 3
-                    if config.symbol_at_right:
-                        max_edge -= 3
-                    if i <=max_edge and i >= min_edge:
-                        symbol_position = False
-                # 判断目前该行在整页的哪个部分
-                if i <= 3:
-                    line_part = 'left'
-                elif i <= cols_num - 3:
-                    line_part = 'center'
-                else:
-                    line_part = 'right'
+                y_start = page_height - 2 * margin_h - surplus_height
 
-                blank_length = int(config.blank_length * page_height - y - margin_h)
-                if config.blank_at_top:
-                    if line_part in config.blank_at_top_lines:
-                        y += blank_length
-                        col_length -= blank_length
-                    # 自定义留白
-                    elif 'defined' in config.blank_at_top_lines:
-                        if i >= cols_num * config.blank_at_top_defined[0] and i <= cols_num * config.blank_at_top_defined[1]:
+                # 随机确定分区高度
+                region_height = int(surplus_height / (region_num - rn))
+                float_height = int(region_height / 2)
+                region_height = random.randint(region_height - float_height, region_height + float_height)
+                if region_height > surplus_height or rn == region_num - 1:
+                    region_height = surplus_height
+
+                surplus_height = surplus_height - region_height - config.region_thickness
+                rn += 1
+
+                # 画分区的线
+                if config.region_draw_line != 'no' and rn != 1:
+                    line_thickness = random.randint(2, 4)
+                    p = Image.fromarray(np_page)
+                    draw = ImageDraw.Draw(p)
+                    draw.line([(margin_w, y_start + margin_h - 1), (page_width - 1 - margin_w, y_start + margin_h - 1)],
+                              fill="white",
+                              width=line_thickness)
+                    if config.region_draw_line == 'double':
+                        double_line_y = y_start - config.region_thickness + margin_h
+                        draw.line([(margin_w, double_line_y), (page_width - 1 - margin_w, double_line_y)],
+                                  fill="white",
+                                  width=line_thickness)
+                    if config.region_draw_line == 'mix' and random.random() < 0.5:
+                        double_line_y = y_start - config.region_thickness + margin_h
+                        draw.line([(margin_w, double_line_y), (page_width - 1 - margin_w, double_line_y)],
+                                  fill="white",
+                                  width=line_thickness)
+                    np_page = np.array(p, dtype=np.uint8)
+
+                # 逐列生成汉字，最右边为第一列
+                for i in range(len(xs) - 1, 0, -1):
+                    x1, x2 = xs[i - 1] + 1, xs[i] - 1
+                    y = margin_h + y_start + int(random.uniform(0.0, 1) * margin_line_thickness)
+                    col_length = region_height
+
+                    symbol_position = True
+                    if config.symbol_position_specified:  # 用于判断左右端是否随机插入blank
+                        min_edge = 0
+                        max_edge = cols_num
+                        if config.symbol_at_left:
+                            min_edge += 3
+                        if config.symbol_at_right:
+                            max_edge -= 3
+                        if i <=max_edge and i >= min_edge:
+                            symbol_position = False
+                    # 判断目前该行在整页的哪个部分
+                    if i <= 3:
+                        line_part = 'left'
+                    elif i <= cols_num - 3:
+                        line_part = 'center'
+                    else:
+                        line_part = 'right'
+
+                    blank_length = int(config.blank_length * page_height - y - margin_h)
+                    if config.blank_at_top:
+                        if line_part in config.blank_at_top_lines:
                             y += blank_length
                             col_length -= blank_length
-                if config.blank_at_bottom:
-                    if line_part in config.blank_at_bottom_lines:
-                        col_length -= blank_length
-                    # 自定义留白
-                    elif 'defined' in config.blank_at_bottom_lines:
-                        if i >= cols_num * config.blank_at_bottom_defined[0] and i <= cols_num * config.blank_at_bottom_defined[1]:
+                        # 自定义留白
+                        elif 'defined' in config.blank_at_top_lines:
+                            if i >= cols_num * config.blank_at_top_defined[0] and i <= cols_num * config.blank_at_top_defined[1]:
+                                y += blank_length
+                                col_length -= blank_length
+                    if config.blank_at_bottom:
+                        if line_part in config.blank_at_bottom_lines:
                             col_length -= blank_length
+                        # 自定义留白
+                        elif 'defined' in config.blank_at_bottom_lines:
+                            if i >= cols_num * config.blank_at_bottom_defined[0] and i <= cols_num * config.blank_at_bottom_defined[1]:
+                                col_length -= blank_length
 
-                # 不填满整行
-                if not config.full_line:
-                    line_length = random.uniform(config.line_length, 1)
-                    col_length = int(line_length * col_length)
-                if config.line_type == 'mixed':
-                    _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
-                        x1, x2, y, col_length, np_page, char_spacing, symbol_position=symbol_position
-                    )
-                elif config.line_type == 'single':
-                    _, text_bbox, text, char_bbox = self.generate_one_col_chars_with_text(
-                        x1, x2, y, col_length, np_page, char_spacing
-                    )
-                    text_bbox_list = [text_bbox]
-                    text_list = [text]
-                    char_bbox_list = char_bbox
-                    char_list = text
-                else:
-                    raise ValueError
+                    # 不填满整行
+                    if not config.full_line:
+                        line_length = random.uniform(config.line_length, 1)
+                        col_length = int(line_length * col_length)
+                    if config.line_type == 'mixed':
+                        _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
+                            x1, x2, y, col_length, np_page, char_spacing, symbol_position=symbol_position
+                        )
+                    elif config.line_type == 'single':
+                        _, text_bbox, text, char_bbox = self.generate_one_col_chars_with_text(
+                            x1, x2, y, col_length, np_page, char_spacing
+                        )
+                        text_bbox_list = [text_bbox]
+                        text_list = [text]
+                        char_bbox_list = char_bbox
+                        char_list = text
+                    else:
+                        raise ValueError
 
-                text_bbox_records_list.extend(text_bbox_list)
-                text_records_list.extend(text_list)
-                char_bbox_records_list.extend(char_bbox_list)
-                char_records_list.extend(char_list)
+                    text_bbox_records_list.extend(text_bbox_list)
+                    text_records_list.extend(text_list)
+                    char_bbox_records_list.extend(char_bbox_list)
+                    char_records_list.extend(char_list)
 
         # 向页面里添加图片
         if config.chart_in_page:
@@ -465,7 +503,7 @@ class generate_text_lines_with_text_handle:
 
         return y, text_bbox_list, text_list, char_bbox_list, char_list
 
-    def generate_one_row_chars_with_text(self, x, y1, y2, length, np_background, char_spacing, reshape='single'):
+    def generate_one_row_chars_with_text(self, x, y1, y2, length, np_background, char_spacing, line_type='single'):
         """
         :return: x, text_bbox, text
         """
@@ -480,7 +518,7 @@ class generate_text_lines_with_text_handle:
             else:
                 last_char = False
             chinese_char, bounding_box, x_tail = self.generate_char_img_into_unclosed_box_with_text(
-                np_background, x1=x, y1=y1, x2=None, y2=y2, char_spacing=char_spacing, last_char=last_char, reshape=reshape
+                np_background, x1=x, y1=y1, x2=None, y2=y2, char_spacing=char_spacing, last_char=last_char, line_type=line_type
             )
 
             char_and_box_list.append((chinese_char, bounding_box))
@@ -503,13 +541,13 @@ class generate_text_lines_with_text_handle:
 
         # x, text_bbox, text
         x_1, text1_bbox, text1, char_bbox1 = self.generate_one_row_chars_with_text(
-            x, y1, mid_y, length, np_background, char_spacing, reshape='double')
+            x, y1, mid_y, length, np_background, char_spacing, line_type='double')
         x_2, text2_bbox, text2, char_bbox2 = self.generate_one_row_chars_with_text(
-            x, mid_y + 1, y2, length, np_background, char_spacing, reshape='double')
+            x, mid_y + 1, y2, length, np_background, char_spacing, line_type='double')
 
         return max(x_1, x_2), text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2
 
-    def generate_one_col_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, reshape='single',
+    def generate_one_col_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, line_type='single',
                                          symbol_position=True):
         # 记录下生成的汉字及其bounding-box
         char_and_box_list = []
@@ -528,7 +566,7 @@ class generate_text_lines_with_text_handle:
                 last_char = False
             chinese_char, bounding_box, y_tail = self.generate_char_img_into_unclosed_box_with_text(
                 np_background, x1=x1, y1=y, x2=x2, y2=None, char_spacing=char_spacing, first_char=first_char,
-                last_char=last_char, reshape=reshape, symbol_position=symbol_position
+                last_char=last_char, line_type=line_type, symbol_position=symbol_position
             )
             if chinese_char is None:
                 break
@@ -552,15 +590,15 @@ class generate_text_lines_with_text_handle:
         mid_x = x1 + round(col_width / random.uniform(1.7, 2.3))
 
         y_1, text1_bbox, text1, char_bbox1 = self.generate_one_col_chars_with_text(
-            mid_x + 1, x2, y, length, np_background, char_spacing, reshape='double', symbol_position=symbol_position)
+            mid_x + 1, x2, y, length, np_background, char_spacing, line_type='double', symbol_position=symbol_position)
         y_2, text2_bbox, text2, char_bbox2 = self.generate_one_col_chars_with_text(
-            x1, mid_x, y, length, np_background, char_spacing, reshape='double', symbol_position=symbol_position)
+            x1, mid_x, y, length, np_background, char_spacing, line_type='double', symbol_position=symbol_position)
 
         return max(y_1, y_2), text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2
 
     def generate_char_img_into_unclosed_box_with_text(self, np_background, x1, y1, x2=None, y2=None,
                                                       char_spacing=(0.05, 0.05), first_char=False, last_char=False,
-                                                      reshape='', symbol_position=True):
+                                                      line_type='', symbol_position=True):
         config = self.config
         if x2 is None and y2 is None:
             raise ValueError("There is one and only one None in (x2, y2).")
@@ -616,7 +654,10 @@ class generate_text_lines_with_text_handle:
         char_img_height, char_img_width = np_char_img.shape[:2]
 
         if config.use_bigger_canvas:
-            np_char_img = bigger_canvas(np_char_img)
+            if line_type == 'double' and config.use_bigger_canvas_double is True:
+                np_char_img = bigger_canvas(np_char_img)
+            elif line_type == 'single' and config.use_bigger_canvas_single is True:
+                np_char_img = bigger_canvas(np_char_img)
 
         # 添加与字图重叠的符号
         if config.symbol_on_char:
@@ -656,10 +697,10 @@ class generate_text_lines_with_text_handle:
             # 是否需要将字拉伸为长方形
             stretch = 1.0
             if config.char_reshape:
-                if config.char_reshape_line in [reshape, 'both']:
-                    if reshape == 'single':
+                if config.char_reshape_line in [line_type, 'both']:
+                    if line_type == 'single':
                         stretch = config.char_single_line_reshape_stretch
-                    else:  # reshape == 'double'
+                    else:  # line_type == 'double'
                         stretch = config.char_double_line_reshape_stretch
 
             if char_img_height * 1.4 < char_img_width:
@@ -688,8 +729,8 @@ class generate_text_lines_with_text_handle:
             # 是否需要将字拉伸为长方形
             stretch = 1.0
             if config.char_reshape:
-                if config.char_reshape_line in [reshape, 'both']:
-                    if reshape == 'single':
+                if config.char_reshape_line in [line_type, 'both']:
+                    if line_type == 'single':
                         stretch = config.char_single_line_reshape_stretch
                     else:  # reshape == 'double'
                         stretch = config.char_double_line_reshape_stretch
@@ -761,6 +802,7 @@ class generate_text_lines_with_text_handle:
         num = random.randint(1, config.chart_max_num[chart_name])
         name = chart_name + '- (' + str(num) + ').jpg'
         return os.path.join(config.chart_path, name)
+
 
 # 对字体图像做等比例缩放
 def resize_img_by_opencv(np_img, obj_size, make_border=False):
