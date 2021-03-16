@@ -172,6 +172,9 @@ class config_manager:
         self.special_type = []  # 特殊的格式  从[split|num_end|num_start]中选择并加入
         self.segment_type = 'normal'  # 字之间间隔格式 [normal|spacious|crowded|mixed]
 
+        self.multiple_plate = False  # 某些排版需要多个板块拼接
+        self.plate_type = 'note_inside'  # 拼接类型
+
         self.store_imgs = BOOK_PAGE_IMGS_V   # 在哪里存储图片
         self.store_tags = BOOK_PAGE_TAGS_FILE_V  # 在哪里存储标签
 

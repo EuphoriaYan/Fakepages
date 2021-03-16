@@ -80,11 +80,16 @@ class generate_text_lines_with_text_handle:
                 else:
                     shape = config.shape
 
-                self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
+                if config.multiple_plate:
+                    PIL_page, text_bbox_list, text_list, char_bbox_list, char_list = self.create_multiple_plate(
+                        shape, orient, config.plate_type
+                    )
+                else:  # 不需要拼接，单页即可
+                    self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
 
-                PIL_page, text_bbox_list, text_list, char_bbox_list, char_list = self.create_book_page_with_text(
-                    shape, orient
-                )
+                    PIL_page, text_bbox_list, text_list, char_bbox_list, char_list, _ = self.create_book_page_with_text(
+                        shape, orient
+                    )
 
                 if config.augment:
                     new_text_bbox_list = []
@@ -131,7 +136,138 @@ class generate_text_lines_with_text_handle:
                     print(" %d / %d Done" % (i, self.config.obj_num))
                     sys.stdout.flush()
 
-    def create_book_page_with_text(self, shape, orient):
+    def create_multiple_plate(self, shape, orient, type):
+        page_height, page_width = shape
+        np_page = np.zeros(shape=shape, dtype=np.uint8)
+
+        if type == 'note_inside':
+            page_width_R = random.randint(int(page_width/6), int(page_width*0.4))  # note右侧板块的宽
+            page_width_L = random.randint(int(page_width/6), int(page_width*0.4))  # note左侧板块的宽
+            page_width_note = page_width - page_width_R - page_width_L - 2
+
+            page_height_note = random.randint(int(page_height/4), int(page_height/2))
+            page_height_below = page_height - page_height_note - 1  # note下面那个板块的高
+            page_height_side = page_height - random.randint(0, int(page_height/8))  # note两侧板块的高
+
+            # 生成右侧板块
+            shape_R = (page_height_side, page_width_R)
+            self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
+            PIL_page_R, text_bbox_list_R, text_list_R, char_bbox_list_R, char_list_R, col_w = self.create_book_page_with_text(
+                shape_R, orient, margin_at_top=False, margin_at_left=False, draw_frame=False)
+
+            # 为两个“半列”和一个“半行”腾地方
+            col_w = int(col_w)
+            hide_part1 = int(col_w * random.uniform(0.5, 0.8))  # 左边
+            hide_part2 = int(col_w * random.uniform(0.5, 0.8))  # 右边
+            hide_part3 = int(col_w * random.uniform(0.5, 0.8))  # 下边
+            page_width_L = page_width_L - 2 * col_w + hide_part1 + hide_part2
+            page_width_below = page_width_note + 2 * col_w - hide_part1 - hide_part2
+            page_height_below = page_height_below - col_w + hide_part3
+            shape_note = (page_height_note, page_width_note)
+            shape_below = (page_height_below, page_width_below)
+            shape_L = (page_height_side, page_width_L)
+
+            # 生成左侧和下侧板块
+            PIL_page_below, text_bbox_list_below, text_list_below, char_bbox_list_below, char_list_below, _ = self.create_book_page_with_text(
+                shape_below, orient, margin_at_left=False, margin_at_top=False, margin_at_right=False, draw_frame=False, col_w=col_w)
+            PIL_page_L, text_bbox_list_L, text_list_L, char_bbox_list_L, char_list_L, _ = self.create_book_page_with_text(
+                shape_L, orient, margin_at_top=False, margin_at_right=False, draw_frame=False, col_w=col_w)
+
+            # 确定板块坐标
+            x_L1 = 0
+            x_L2 = page_width_L
+            y_L1 = page_height - page_height_side
+            y_L2 = page_height
+
+            x_note1 = x_L2 + col_w - hide_part1 + 1
+            x_note2 = x_note1 + page_width_note
+            y_note1 = 0
+            y_note2 = page_height_note
+
+            x_below1 = x_L2 + 1
+            x_below2 = x_below1 + page_width_below
+            y_below1 = y_note2 + col_w - hide_part3 + 1
+            y_below2 = y_below1 + page_height_below
+
+            x_R1 = x_below2 + 1
+            x_R2 = x_R1 + page_width_R
+            y_R1 = y_L1
+            y_R2 = y_L2
+
+            # 插入两个“半列”，字体与左、右、下 相同
+            x1 = x_L2 + 1
+            x2 = x1 + col_w
+            y = y_L1
+            col_length = y_note2 - y_L1
+            char_spacing = (random.uniform(0.0, 0.2), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+            # 左侧
+            self.generate_one_col_chars_with_text(
+                x1, x2, y, col_length, np_page, char_spacing
+            )
+            # 右侧
+            x1 = x_note2 - hide_part2
+            x2 = x1 + col_w
+            self.generate_one_col_chars_with_text(
+                x1, x2, y, col_length, np_page, char_spacing
+            )
+            # 下方
+            x = x_below1
+            y2 = y_below1
+            y1 = y2 - col_w
+            length_single = x_below2 - x_below1
+            self.generate_one_row_chars_with_text(
+                x, y1, y2, length_single, np_page, char_spacing
+            )
+
+            # 换个字体后生成便签板块
+            self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
+            PIL_page_note, text_bbox_list_note, text_list_note, char_bbox_list_note, char_list_note, _ = self.create_book_page_with_text(
+                shape_note, orient, margin_at_left=False, margin_at_right=False, margin_at_bottom=False, plat_type='note')
+
+            # 转换4个板块
+            np_page_R = np.array(PIL_page_R, dtype=np.uint8)
+            np_page_note = np.array(PIL_page_note, dtype=np.uint8)
+            np_page_below = np.array(PIL_page_below, dtype=np.uint8)
+            np_page_L = np.array(PIL_page_L, dtype=np.uint8)
+
+            # 颜色反转
+            np_page_R = reverse_image_color(np_img=np_page_R)
+            np_page_note = reverse_image_color(np_img=np_page_note)
+            np_page_below = reverse_image_color(np_img=np_page_below)
+            np_page_L = reverse_image_color(np_img=np_page_L)
+
+            # 拼接4个板块
+            np_page[y_L1:y_L2, x_L1:x_L2] |= np_page_L
+            np_page[y_note1:y_note2, x_note1:x_note2] = np_page_note
+            np_page[y_below1:y_below2, x_below1:x_below2] |= np_page_below
+            np_page[y_R1:y_R2, x_R1:x_R2] |= np_page_R
+
+            np_page = reverse_image_color(np_img=np_page)
+            PIL_page = Image.fromarray(np_page)
+
+            # 线性变换tag
+            bbox_list_list = [text_bbox_list_R, text_bbox_list_L, text_bbox_list_note, text_bbox_list_below,
+                              char_bbox_list_R, char_bbox_list_L, char_bbox_list_note, char_bbox_list_below]
+            bbox_move_xy = [[x_R1, y_R1], [x_L1, y_L1], [x_note1, y_note1], [x_below1, y_below1]]
+            i = 0
+            for bbox_list in bbox_list_list:
+                for bbox in bbox_list:
+                    j = 0
+                    while j < 4:
+                        bbox[j] += bbox_move_xy[i % 4][j % 2]
+                        j += 1
+                i += 1
+
+            # 合并tag
+            text_bbox_list = text_bbox_list_R + text_bbox_list_note + text_bbox_list_below + text_bbox_list_L
+            text_list = text_list_R + text_list_note + text_list_below + text_list_L
+            char_bbox_list = char_bbox_list_R + char_bbox_list_note + char_bbox_list_below + char_bbox_list_L
+            char_list = char_list_R + char_list_note + char_list_below + char_list_L
+
+            return PIL_page, text_bbox_list, text_list, char_bbox_list, char_list
+
+    def create_book_page_with_text(self, shape, orient, margin_at_top=True, margin_at_bottom=True,
+                                   margin_at_left=True, margin_at_right=True, draw_frame=True, plat_type='', col_w=0):
 
         config = self.config
 
@@ -150,11 +286,23 @@ class generate_text_lines_with_text_handle:
         # 随机确定书页边框
         margin_w = round(random.uniform(0.01, 0.05) * page_width)
         margin_h = round(random.uniform(0.01, 0.05) * page_height)
+        margin_left = margin_w
+        margin_right = margin_w
+        margin_top = margin_h
+        margin_bottom = margin_h
+        if not margin_at_top:
+            margin_top = 0
+        if not margin_at_bottom:
+            margin_bottom = 0
+        if not margin_at_left:
+            margin_left = 0
+        if not margin_at_right:
+            margin_right = 0
         margin_line_thickness = random.randint(2, 6)
         line_thickness = round(margin_line_thickness / 2)
-        if draw_line:
+        if draw_line and draw_frame:
             # 点的坐标格式为(x, y)，不是(y, x)
-            draw.rectangle([(margin_w, margin_h), (page_width - 1 - margin_w, page_height - 1 - margin_h)],
+            draw.rectangle([(margin_left, margin_top), (page_width - 1 - margin_right, page_height - 1 - margin_bottom)],
                            fill=None, outline="white", width=margin_line_thickness)
 
         # 记录下文本行的bounding-box
@@ -221,15 +369,28 @@ class generate_text_lines_with_text_handle:
             # 随机决定文本的列数
             cols_num = random.randint(int(page_width / page_height * config.line_num[0]),
                                       int(page_width / page_height * config.line_num[1]))
-            col_w = (page_width - 2 * margin_w) / cols_num
+            # 便条的列数少一些
+            if plat_type == 'note':
+                cols_num = random.randint(int(page_width / page_height * config.line_num[0] / 2),
+                                          int(page_width / page_height * config.line_num[1] / 2))
+            if cols_num == 0:
+                cols_num = 1
+            # 若无设定列宽，则按照随机列数决定
+            if col_w == 0:
+                col_w = (page_width - margin_left - margin_right) / cols_num
+            else:  # 若有设定列宽，则列数重新取值，列宽取合适的近似值
+                cols_num = int((page_width - margin_left - margin_right) / col_w)
+                if cols_num == 0:
+                    cols_num = 1
+                col_w = (page_width - margin_left - margin_right) / cols_num
 
             # x-coordinate划分列
-            xs = [margin_w + round(i * col_w) for i in range(cols_num)] + [page_width - 1 - margin_w, ]
+            xs = [margin_left + round(i * col_w) for i in range(cols_num)] + [page_width - 1 - margin_right]
 
             # 画列线，第一条线和最后一条线是边缘线，不需要画
             if draw_line:
                 for x in xs[1:-1]:
-                    draw.line([(x, margin_h), (x, page_height - 1 - margin_h)], fill="white", width=line_thickness)
+                    draw.line([(x, margin_top), (x, page_height - 1 - margin_bottom)], fill="white", width=line_thickness)
                 np_page = np.array(PIL_page, dtype=np.uint8)
 
             # 随机决定字符间距占列距的比例
@@ -253,10 +414,10 @@ class generate_text_lines_with_text_handle:
             # 汉字上下分区
             region_num = random.randint(config.region_num[0], config.region_num[1])
             rn = 0
-            surplus_height = page_height - 2 * margin_h
+            surplus_height = page_height - margin_top - margin_bottom
             while rn < region_num:
 
-                y_start = page_height - 2 * margin_h - surplus_height
+                y_start = page_height - margin_top - margin_bottom - surplus_height
 
                 # 随机确定分区高度
                 region_height = int(surplus_height / (region_num - rn))
@@ -273,17 +434,18 @@ class generate_text_lines_with_text_handle:
                     line_thickness = random.randint(2, 4)
                     p = Image.fromarray(np_page)
                     draw = ImageDraw.Draw(p)
-                    draw.line([(margin_w, y_start + margin_h - 1), (page_width - 1 - margin_w, y_start + margin_h - 1)],
+                    draw.line([(margin_left, y_start + margin_h - 1),
+                               (page_width - 1 - margin_right, y_start + margin_h - 1)],
                               fill="white",
                               width=line_thickness)
                     if config.region_draw_line == 'double':
                         double_line_y = y_start - config.region_thickness + margin_h
-                        draw.line([(margin_w, double_line_y), (page_width - 1 - margin_w, double_line_y)],
+                        draw.line([(margin_left, double_line_y), (page_width - 1 - margin_right, double_line_y)],
                                   fill="white",
                                   width=line_thickness)
                     if config.region_draw_line == 'mix' and random.random() < 0.5:
                         double_line_y = y_start - config.region_thickness + margin_h
-                        draw.line([(margin_w, double_line_y), (page_width - 1 - margin_w, double_line_y)],
+                        draw.line([(margin_left, double_line_y), (page_width - 1 - margin_right, double_line_y)],
                                   fill="white",
                                   width=line_thickness)
                     np_page = np.array(p, dtype=np.uint8)
@@ -291,7 +453,7 @@ class generate_text_lines_with_text_handle:
                 # 逐列生成汉字，最右边为第一列
                 for i in range(len(xs) - 1, 0, -1):
                     x1, x2 = xs[i - 1] + 1, xs[i] - 1
-                    y = margin_h + y_start + int(random.uniform(0.0, 1) * margin_line_thickness)
+                    y = margin_top + y_start + int(random.uniform(0.0, 1) * margin_line_thickness)
                     col_length = region_height
 
                     symbol_position = True
@@ -392,7 +554,7 @@ class generate_text_lines_with_text_handle:
         # 将黑底白字转换为白底黑字
         np_page = reverse_image_color(np_img=np_page)
         PIL_page = Image.fromarray(np_page)
-        return PIL_page, text_bbox_records_list, text_records_list, char_bbox_records_list, char_records_list
+        return PIL_page, text_bbox_records_list, text_records_list, char_bbox_records_list, char_records_list, col_w
 
     def generate_mix_rows_chars_with_text(self, x, y1, y2, row_length, np_background, char_spacing):
         row_height = y2 - y1 + 1
@@ -579,7 +741,7 @@ class generate_text_lines_with_text_handle:
         # 获取文本行的bounding-box
         head_x1, head_y1, _, _ = char_and_box_list[0][1]
         _, _, tail_x2, tail_y2 = char_and_box_list[-1][1]
-        text_bbox = (head_x1, head_y1, tail_x2, tail_y2)
+        text_bbox = [head_x1, head_y1, tail_x2, tail_y2]
         text = [char_and_box[0] for char_and_box in char_and_box_list]
         char_bbox = [char_and_box[1] for char_and_box in char_and_box_list]
 
@@ -781,7 +943,7 @@ class generate_text_lines_with_text_handle:
             bbox_y2 = min(random.randint(box_y2, box_y2 + char_spacing_h), np_background.shape[0] - 1)
         else:
             bbox_y2 = min(random.randint(box_y2 + char_spacing_h, box_y2), np_background.shape[0] - 1)
-        bounding_box = (bbox_x1, bbox_y1, bbox_x2, bbox_y2)
+        bounding_box = [bbox_x1, bbox_y1, bbox_x2, bbox_y2]
 
         char_box_tail = box_x2 + 1 if x2 is None else box_y2 + 1
 
