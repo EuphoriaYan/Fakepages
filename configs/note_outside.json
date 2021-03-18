@@ -1,5 +1,5 @@
 {
-  "obj_num": 1,
+  "obj_num": 10,
   "text_dict": "raw_text/leishu_sample.txt",
   "delete_symbol": true,
   "keep_line_break": true,
