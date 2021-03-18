@@ -1,5 +1,5 @@
 {
-  "obj_num": 10,
+  "obj_num": 1,
   "text_dict": "raw_text/leishu_sample.txt",
   "delete_symbol": true,
   "keep_line_break": true,
@@ -20,11 +20,10 @@
   "embedding_num": 250,
   "resume": 187920,
   "line_type": "mixed",
-  "line_num": [15, 20],
   "charset_file": "charset/charset_xl.txt",
   "init_num": 0,
   "special_type": [],
   "segment_type": "normal",
   "multiple_plate": true,
-  "plate_type": "note_inside"
+  "plate_type": "note_outside"
 }

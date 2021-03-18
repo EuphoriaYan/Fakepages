@@ -139,6 +139,75 @@ class generate_text_lines_with_text_handle:
     def create_multiple_plate(self, shape, orient, type):
         page_height, page_width = shape
         np_page = np.zeros(shape=shape, dtype=np.uint8)
+        left_side = 0
+        right_side = 0
+        top_side = 0
+        bottom_side = 0
+
+        if type == 'note_outside':
+            page_width_note = random.randint(int(page_width/6), int(page_width/4))
+            page_height_note = random.randint(int(page_height/6), int(page_height/4))
+            if random.random() < 0.5:
+                if random.random() < 0.5:  # note靠左
+                    x_note1 = 0
+                    x_note2 = x_note1 + page_width_note
+                    left_side = page_width_note
+                else:  # note靠右
+                    x_note2 = page_width
+                    x_note1 = x_note2 - page_width_note
+                    right_side = page_width_note
+                y_note1 = random.randint(0, page_height - page_height_note)
+                y_note2 = y_note1 + page_height_note
+            else:
+                if random.random() < 0.5:  # note靠上
+                    y_note1 = 0
+                    y_note2 = y_note1 + page_height_note
+                    top_side = page_height_note
+                else:  # note靠下
+                    y_note2 = page_height
+                    y_note1 = y_note2 - page_height_note
+                    bottom_side = page_height_note
+                x_note1 = random.randint(0, page_width - page_width_note)
+                x_note2 = x_note1 + page_width_note
+
+            page_width_body = page_width - left_side - right_side - 1
+            page_height_body = page_height - top_side - bottom_side - 1
+
+            x_body1 = left_side + 1
+            x_body2 = x_body1 + page_width_body
+            y_body1 = top_side + 1
+            y_body2 = y_body1 + page_height_body
+
+            shape_body = (page_height_body, page_width_body)
+            shape_note = (page_height_note, page_width_note)
+
+            self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
+            PIL_page_body, text_bbox_list_body, text_list_body, char_bbox_list_body, char_list_body, _ = self.create_book_page_with_text(
+                shape_body, orient)
+            self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
+            PIL_page_note, text_bbox_list_note, text_list_note, char_bbox_list_note, char_list_note, _ = self.create_book_page_with_text(
+                shape_note, orient, plat_type='note')
+
+            np_page, text_bbox_list_body, char_bbox_list_body = \
+                self.add_subpage_into_page(np_page, PIL_page_body, text_bbox_list_body, char_bbox_list_body,
+                                           x_body1, x_body2, y_body1, y_body2)
+            np_page, text_bbox_list_note, char_bbox_list_note = \
+                self.add_subpage_into_page(np_page, PIL_page_note, text_bbox_list_note, char_bbox_list_note,
+                                           x_note1, x_note2, y_note1, y_note2)
+
+            np_page = reverse_image_color(np_img=np_page)
+            PIL_page = Image.fromarray(np_page)
+
+            if bottom_side != 0 or left_side != 0:
+                text_bbox_list = text_bbox_list_body + text_bbox_list_note
+                text_list =  text_list_body + text_list_note
+                char_bbox_list = char_bbox_list_body + char_bbox_list_note
+                char_list = char_list_body + char_list_note
+            else:
+                text_bbox_list = text_bbox_list_note + text_bbox_list_body
+                text_list = text_list_note + text_list_body
+                char_bbox_list = char_bbox_list_note + char_bbox_list_body
+                char_list = char_list_note + char_list_body
 
         if type == 'note_inside':
             page_width_R = random.randint(int(page_width/6), int(page_width*0.4))  # note右侧板块的宽
@@ -224,39 +293,21 @@ class generate_text_lines_with_text_handle:
             PIL_page_note, text_bbox_list_note, text_list_note, char_bbox_list_note, char_list_note, _ = self.create_book_page_with_text(
                 shape_note, orient, margin_at_left=False, margin_at_right=False, margin_at_bottom=False, plat_type='note')
 
-            # 转换4个板块
-            np_page_R = np.array(PIL_page_R, dtype=np.uint8)
-            np_page_note = np.array(PIL_page_note, dtype=np.uint8)
-            np_page_below = np.array(PIL_page_below, dtype=np.uint8)
-            np_page_L = np.array(PIL_page_L, dtype=np.uint8)
-
-            # 颜色反转
-            np_page_R = reverse_image_color(np_img=np_page_R)
-            np_page_note = reverse_image_color(np_img=np_page_note)
-            np_page_below = reverse_image_color(np_img=np_page_below)
-            np_page_L = reverse_image_color(np_img=np_page_L)
-
-            # 拼接4个板块
-            np_page[y_L1:y_L2, x_L1:x_L2] |= np_page_L
-            np_page[y_note1:y_note2, x_note1:x_note2] = np_page_note
-            np_page[y_below1:y_below2, x_below1:x_below2] |= np_page_below
-            np_page[y_R1:y_R2, x_R1:x_R2] |= np_page_R
+            np_page, text_bbox_list_note, char_bbox_list_note = \
+                self.add_subpage_into_page(np_page, PIL_page_note, text_bbox_list_note, char_bbox_list_note,
+                                           x_note1, x_note2, y_note1, y_note2, cover=True)
+            np_page, text_bbox_list_R, char_bbox_list_R = \
+                self.add_subpage_into_page(np_page, PIL_page_R, text_bbox_list_R, char_bbox_list_R,
+                                           x_R1, x_R2, y_R1, y_R2)
+            np_page, text_bbox_list_L, char_bbox_list_L = \
+                self.add_subpage_into_page(np_page, PIL_page_L, text_bbox_list_L, char_bbox_list_L,
+                                           x_L1, x_L2, y_L1, y_L2)
+            np_page, text_bbox_list_below, char_bbox_list_below = \
+                self.add_subpage_into_page(np_page, PIL_page_below, text_bbox_list_below, char_bbox_list_below,
+                                           x_below1, x_below2, y_below1, y_below2)
 
             np_page = reverse_image_color(np_img=np_page)
             PIL_page = Image.fromarray(np_page)
-
-            # 线性变换tag
-            bbox_list_list = [text_bbox_list_R, text_bbox_list_L, text_bbox_list_note, text_bbox_list_below,
-                              char_bbox_list_R, char_bbox_list_L, char_bbox_list_note, char_bbox_list_below]
-            bbox_move_xy = [[x_R1, y_R1], [x_L1, y_L1], [x_note1, y_note1], [x_below1, y_below1]]
-            i = 0
-            for bbox_list in bbox_list_list:
-                for bbox in bbox_list:
-                    j = 0
-                    while j < 4:
-                        bbox[j] += bbox_move_xy[i % 4][j % 2]
-                        j += 1
-                i += 1
 
             # 合并tag
             text_bbox_list = text_bbox_list_R + text_bbox_list_note + text_bbox_list_below + text_bbox_list_L
@@ -264,7 +315,27 @@ class generate_text_lines_with_text_handle:
             char_bbox_list = char_bbox_list_R + char_bbox_list_note + char_bbox_list_below + char_bbox_list_L
             char_list = char_list_R + char_list_note + char_list_below + char_list_L
 
-            return PIL_page, text_bbox_list, text_list, char_bbox_list, char_list
+        return PIL_page, text_bbox_list, text_list, char_bbox_list, char_list
+
+    def add_subpage_into_page(self, np_page, PIL_subpage,
+                              text_bbox_list, char_bbox_list, x1, x2, y1, y2, cover=False):
+        np_subpage = np.array(PIL_subpage, dtype=np.uint8)
+        np_subpage = reverse_image_color(np_img=np_subpage)
+        if cover:  # 完全覆盖
+            np_page[y1:y2, x1:x2] = np_subpage
+        else:
+            np_page[y1:y2, x1:x2] |= np_subpage
+
+        bbox_list_list = [text_bbox_list, char_bbox_list]
+
+        for bbox_list in bbox_list_list:
+            for bbox in bbox_list:
+                bbox[0] += x1
+                bbox[1] += y1
+                bbox[2] += x1
+                bbox[3] += y1
+
+        return np_page, text_bbox_list, char_bbox_list
 
     def create_book_page_with_text(self, shape, orient, margin_at_top=True, margin_at_bottom=True,
                                    margin_at_left=True, margin_at_right=True, draw_frame=True, plat_type='', col_w=0):
