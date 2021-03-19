@@ -144,6 +144,40 @@ class generate_text_lines_with_text_handle:
         top_side = 0
         bottom_side = 0
 
+        if type == 'split_vertical':
+            page_width_R = random.randint(int(page_width*0.3), int(page_width*0.7))
+            page_width_L = page_width - page_width_R - 1
+
+            x_L1 = 0
+            x_L2 = x_L1 + page_width_L
+            x_R1 = x_L2 + 1
+            x_R2 = page_width
+
+            shape_R = (page_height, page_width_R)
+            shape_L = (page_height, page_width_L)
+
+            self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
+            PIL_page_R, text_bbox_list_R, text_list_R, char_bbox_list_R, char_list_R, col_w = self.create_book_page_with_text(
+                shape_R, orient, margin_at_left=False, draw_frame=False)
+            PIL_page_L, text_bbox_list_L, text_list_L, char_bbox_list_L, char_list_L, _ = self.create_book_page_with_text(
+                shape_L, orient, margin_at_right=False, draw_frame=False, col_w=col_w)
+
+            np_page, text_bbox_list_R, char_bbox_list_R = \
+                self.add_subpage_into_page(np_page, PIL_page_R, text_bbox_list_R, char_bbox_list_R,
+                                           x_R1, x_R2, 0, page_height)
+            np_page, text_bbox_list_L, char_bbox_list_L = \
+                self.add_subpage_into_page(np_page, PIL_page_L, text_bbox_list_L, char_bbox_list_L,
+                                           x_L1, x_L2, 0, page_height)
+
+            np_page = reverse_image_color(np_img=np_page)
+            PIL_page = Image.fromarray(np_page)
+
+            # 合并tag
+            text_bbox_list = text_bbox_list_R + text_bbox_list_L
+            text_list = text_list_R + text_list_L
+            char_bbox_list = char_bbox_list_R + char_bbox_list_L
+            char_list = char_list_R + char_list_L
+
         if type == 'note_outside':
             page_width_note = random.randint(int(page_width/6), int(page_width/4))
             page_height_note = random.randint(int(page_height/6), int(page_height/4))
