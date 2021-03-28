@@ -14,10 +14,10 @@ from PIL import Image
 from tqdm import tqdm
 
 
-def autoinvert(image):
+def autoinvert(image, seal=False):
     assert np.amin(image) >= 0
     assert np.amax(image) <= 1
-    if np.sum(image > 0.9) > np.sum(image < 0.1):
+    if np.sum(image > 0.9) > np.sum(image < 0.1) or seal:
         return 1 - image
     else:
         return image
@@ -219,8 +219,8 @@ def make_fibrous_image(shape, nfibers=300, l=300, a=0.2, stepsize=0.5, limits=(0
 # print-like degradation with multiscale noise
 #
 
-def printlike_multiscale(image, blur=0.5, blotches=5e-5, paper_range=(0.8, 1.0), ink_range=(0.0, 0.2)):
-    selector = autoinvert(image)
+def printlike_multiscale(image, blur=0.5, blotches=5e-5, paper_range=(0.8, 1.0), ink_range=(0.0, 0.2), seal=False):
+    selector = autoinvert(image, seal)
     # selector = random_blotches(selector, 3 * blotches, blotches)
     selector = random_blotches(selector, 2 * blotches, blotches)
     paper = make_multiscale_noise_uniform(image.shape, limits=paper_range)
@@ -230,8 +230,8 @@ def printlike_multiscale(image, blur=0.5, blotches=5e-5, paper_range=(0.8, 1.0),
     return printed
 
 
-def printlike_fibrous(image, blur=0.5, blotches=5e-5, paper_range=(0.8, 1.0), ink_range=(0.0, 0.2)):
-    selector = autoinvert(image)
+def printlike_fibrous(image, blur=0.5, blotches=5e-5, paper_range=(0.8, 1.0), ink_range=(0.0, 0.2), seal=False):
+    selector = autoinvert(image, seal)
     selector = random_blotches(selector, 2 * blotches, blotches)
     paper = make_multiscale_noise(image.shape, [1.0, 5.0, 10.0, 50.0], weights=[1.0, 0.3, 0.5, 0.3], limits=paper_range)
     paper -= make_fibrous_image(image.shape, 300, 500, 0.01, limits=(0.0, 0.25), blur=0.5)
@@ -252,7 +252,7 @@ def test():
     img.show()
 
 
-def ocrodeg_augment(img):
+def ocrodeg_augment(img, seal=False):
     img = np.array(img)
     # 50% use distort, 50% use raw
     flag = 0
@@ -283,11 +283,12 @@ def ocrodeg_augment(img):
     # raw - 50% use multiscale, 50% use fibrous, 0% use raw
     # flag=1 - 35% use multiscale, 35% use fibrous, 30% use raw
     # flag=2 - 20% use multiscale, 20% use fibrous, 60% use raw
+
     rnd = random.random()
     if rnd < 0.5 - flag * 0.15:
-        img = printlike_multiscale(img, blur=0.5)
+        img = printlike_multiscale(img, blur=0.5, seal=seal)
     elif rnd < 1 - flag * 0.15:
-        img = printlike_fibrous(img)
+        img = printlike_fibrous(img, seal=seal)
 
     img = (img * 255).astype(np.uint8)
     img = Image.fromarray(img)

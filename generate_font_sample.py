@@ -14,6 +14,7 @@ from PIL import Image, ImageDraw, ImageFont
 import torch
 from torch import nn
 from torchvision import transforms
+from tqdm import tqdm
 
 from fontmagic_model import FontMagicModel
 
@@ -209,6 +210,21 @@ class create_ttf_ch_handle(Icreate_char_handle):
         self.current_font = random.choice(self.ttf_path_list)
         self.current_charset = processGlyphNames(TTFont(self.current_font).getGlyphNames())
         self.ttf_draw = ImageFont.truetype(self.current_font, self.char_size)
+
+    # def gen_font_labels_all(self, name_font, pth_font):
+    #     font=TTFont(pth_font)
+    #     unicode_map = font['cmap'].tables[0].ttFont.getBestCmap()
+    #     out = ''
+    #     for k,v in tqdm(unicode_map.items()):
+    #         # 过滤
+    #         # uni_lst = ['uni','u1','u2']
+    #         # if not any(uni in v for uni in uni_lst) or len(v) < 6 : continue
+    #         # out += ('{} ----> {}\n'.format(k, chr(int(v[3:],16))))
+    #         # 不过滤
+    #         out+=('{}\t{}\t{}\n'.format(k,v,chr(int(k))))
+    #     pth_font_labels = os.path.join(FONT_PTH, name_font+'.labels.txt')
+    #     with open(pth_font_labels, 'w+', encoding='utf-8') as f:
+    #         f.write(out)
 
     def get_character(self, ch):
         if ch in self.current_charset:

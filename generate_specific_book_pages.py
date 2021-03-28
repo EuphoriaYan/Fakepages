@@ -13,17 +13,20 @@ import numpy as np
 import argparse
 from PIL import Image, ImageDraw, ImageFont
 from queue import Queue
+
+from fontTools.ttLib import TTFont
 from torchvision import transforms
 from torch import nn
 import copy
 
 from util import IMPORTANT_CHARS
-from config import config_manager
+from config import config_manager, FONT_FILE_DIR
 
 from img_utils import rotate_PIL_image, find_min_bound_box, adjust_img_and_put_into_background, reverse_image_color
 from noise_util import add_noise
 from ocrodeg import *
 from generate_font_sample import create_mix_ch_handle, create_imgs_ch_handle, create_ttf_ch_handle
+from generate_seal import change_seal_color, change_seal_shape
 
 
 def check_text_type(text_type):
@@ -66,6 +69,14 @@ class generate_text_lines_with_text_handle:
             self.generate_char_handle = create_imgs_ch_handle(
                 config.char_imgs_path
             )
+        # 生成印章只能用ttf
+        if config.seal_page:
+            self.generate_char_handle = create_ttf_ch_handle(
+                ttf_path=config.seal_ttf_path,
+                default_ttf_path=config.default_ttf_path,
+                char_size=config.char_size,
+                canvas_size=config.canvas_size
+            )
         self.config = config
 
     def generate_book_page_with_text(self):
@@ -90,7 +101,11 @@ class generate_text_lines_with_text_handle:
                     PIL_page, text_bbox_list, text_list, char_bbox_list, char_list, _ = self.create_book_page_with_text(
                         shape, orient
                     )
+                # if config.seal_in_page:  # 创建印章
+                #     PIL_page_seal, text_bbox_list, char_bbox_list = self.add_seal(shape, text_bbox_list, char_bbox_list)
 
+                if config.seal_page:  # 给印章调整形状
+                    PIL_page, text_bbox_list, char_bbox_list = change_seal_shape(PIL_page, text_bbox_list, char_bbox_list)
                 if config.augment:
                     new_text_bbox_list = []
                     new_char_bbox_list = []
@@ -121,8 +136,20 @@ class generate_text_lines_with_text_handle:
                             new_char_bbox_list.append(new_char_bbox)
                         text_bbox_list = new_text_bbox_list
                         char_bbox_list = new_char_bbox_list
-                    PIL_page = add_noise(PIL_page)
-                    PIL_page = ocrodeg_augment(PIL_page)
+                    if config.seal_page:  # 印章的噪音多一些
+                        PIL_page = add_noise(PIL_page, 0.01, 0.03)
+                    else:
+                        PIL_page = add_noise(PIL_page)
+                    PIL_page = ocrodeg_augment(PIL_page, seal=config.seal_page)
+
+                if config.seal_page:  # 给印章上色
+                    PIL_page = change_seal_color(PIL_page)
+
+                # if config.seal_in_page: # 添加印章
+                #     PIL_page = PIL_page.convert('RGB')
+                #     PIL_page_seal = PIL_page_seal.convert('RGB')
+                #     PIL_page_seal = PIL_page_seal.resize(PIL_page.size)
+                #     PIL_page = Image.blend(PIL_page, PIL_page_seal, 0.4)
 
                 image_tags = {"text_bbox_list": text_bbox_list, "text_list": text_list,
                               "char_bbox_list": char_bbox_list, "char_list": char_list}
@@ -135,6 +162,7 @@ class generate_text_lines_with_text_handle:
                 if i % 50 == 0:
                     print(" %d / %d Done" % (i, self.config.obj_num))
                     sys.stdout.flush()
+    # def change_seal_form(self, PIL_pang, text_bbox_list, char_bbox_list):
 
     def create_multiple_plate(self, shape, orient, type):
         page_height, page_width = shape
@@ -222,12 +250,12 @@ class generate_text_lines_with_text_handle:
             PIL_page_note, text_bbox_list_note, text_list_note, char_bbox_list_note, char_list_note, _ = self.create_book_page_with_text(
                 shape_note, orient, plat_type='note')
 
-            np_page, text_bbox_list_body, char_bbox_list_body = \
-                self.add_subpage_into_page(np_page, PIL_page_body, text_bbox_list_body, char_bbox_list_body,
-                                           x_body1, x_body2, y_body1, y_body2)
-            np_page, text_bbox_list_note, char_bbox_list_note = \
-                self.add_subpage_into_page(np_page, PIL_page_note, text_bbox_list_note, char_bbox_list_note,
-                                           x_note1, x_note2, y_note1, y_note2)
+            np_page, text_bbox_list_body, char_bbox_list_body = self.add_subpage_into_page(
+                np_page, PIL_page_body, text_bbox_list_body, char_bbox_list_body, x_body1, x_body2, y_body1, y_body2
+            )
+            np_page, text_bbox_list_note, char_bbox_list_note = self.add_subpage_into_page(
+                np_page, PIL_page_note, text_bbox_list_note, char_bbox_list_note, x_note1, x_note2, y_note1, y_note2
+            )
 
             np_page = reverse_image_color(np_img=np_page)
             PIL_page = Image.fromarray(np_page)
@@ -325,20 +353,21 @@ class generate_text_lines_with_text_handle:
             # 换个字体后生成便签板块
             self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
             PIL_page_note, text_bbox_list_note, text_list_note, char_bbox_list_note, char_list_note, _ = self.create_book_page_with_text(
-                shape_note, orient, margin_at_left=False, margin_at_right=False, margin_at_bottom=False, plat_type='note')
+                shape_note, orient, margin_at_left=False, margin_at_right=False, margin_at_bottom=False, plat_type='note'
+            )
 
-            np_page, text_bbox_list_note, char_bbox_list_note = \
-                self.add_subpage_into_page(np_page, PIL_page_note, text_bbox_list_note, char_bbox_list_note,
-                                           x_note1, x_note2, y_note1, y_note2, cover=True)
-            np_page, text_bbox_list_R, char_bbox_list_R = \
-                self.add_subpage_into_page(np_page, PIL_page_R, text_bbox_list_R, char_bbox_list_R,
-                                           x_R1, x_R2, y_R1, y_R2)
-            np_page, text_bbox_list_L, char_bbox_list_L = \
-                self.add_subpage_into_page(np_page, PIL_page_L, text_bbox_list_L, char_bbox_list_L,
-                                           x_L1, x_L2, y_L1, y_L2)
-            np_page, text_bbox_list_below, char_bbox_list_below = \
-                self.add_subpage_into_page(np_page, PIL_page_below, text_bbox_list_below, char_bbox_list_below,
-                                           x_below1, x_below2, y_below1, y_below2)
+            np_page, text_bbox_list_note, char_bbox_list_note = self.add_subpage_into_page(
+                np_page, PIL_page_note, text_bbox_list_note, char_bbox_list_note, x_note1, x_note2, y_note1, y_note2, cover=True
+            )
+            np_page, text_bbox_list_R, char_bbox_list_R = self.add_subpage_into_page(
+                np_page, PIL_page_R, text_bbox_list_R, char_bbox_list_R, x_R1, x_R2, y_R1, y_R2
+            )
+            np_page, text_bbox_list_L, char_bbox_list_L = self.add_subpage_into_page(
+                np_page, PIL_page_L, text_bbox_list_L, char_bbox_list_L, x_L1, x_L2, y_L1, y_L2
+            )
+            np_page, text_bbox_list_below, char_bbox_list_below = self.add_subpage_into_page(
+                np_page, PIL_page_below, text_bbox_list_below, char_bbox_list_below, x_below1, x_below2, y_below1, y_below2
+            )
 
             np_page = reverse_image_color(np_img=np_page)
             PIL_page = Image.fromarray(np_page)
@@ -350,6 +379,60 @@ class generate_text_lines_with_text_handle:
             char_list = char_list_R + char_list_note + char_list_below + char_list_L
 
         return PIL_page, text_bbox_list, text_list, char_bbox_list, char_list
+
+    def add_seal(self, shape, text_bbox_list, char_bbox_list):
+        self.generate_char_handle = create_ttf_ch_handle(
+            ttf_path=config.seal_ttf_path,
+            default_ttf_path=config.default_ttf_path,
+            char_size=config.char_size,
+            canvas_size=config.canvas_size
+        )
+
+        page_height, page_width = shape
+        np_page = np.zeros(shape=shape, dtype=np.uint8)
+
+        seal_width = random.randint(int(page_width/8), int(page_height/4))
+
+        if random.random() < 0.3:  # 生成方形的印章
+            seal_height = seal_width
+        else:
+            seal_height = seal_width * random.randint(1, 3)
+        shape_seal = (seal_height, seal_width)
+
+        col_w = seal_width - 5
+
+        self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
+        PIL_page_seal, text_bbox_list_seal, text_list_seal, char_bbox_list_seal, char_list_seal, _ = self.create_book_page_with_text(
+            shape_seal, 'vertical', margin_at_top=False, margin_at_bottom=False,
+            margin_at_left=False, margin_at_right=False, draw_frame=False, col_w=col_w)
+
+        np_page_seal = np.array(PIL_page_seal, dtype=np.uint8)
+        np_page_seal = reverse_image_color(np_img=np_page_seal)
+        PIL_page_seal = Image.fromarray(np_page_seal)
+
+        x1 = random.randint(0, page_width - seal_width - 1)
+        x2 = x1 + seal_width
+        y1 = random.randint(0, page_height - seal_height - 1)
+        y2 = y1 + seal_height
+
+        np_page, text_bbox_list_seal, char_bbox_list_seal = self.add_subpage_into_page(
+            np_page, PIL_page_seal, text_bbox_list_seal, char_bbox_list_seal, x1, x2, y1, y2
+        )
+
+        text_bbox_list += text_bbox_list_seal
+        char_list_seal += char_bbox_list_seal
+
+        np_page = reverse_image_color(np_img=np_page)
+
+        black_img = np.zeros(shape)
+        black_img = reverse_image_color(np_img=black_img)
+        arr = np.dstack([black_img, np_page, np_page])
+
+        PIL_page = Image.fromarray(arr.astype('uint8')).convert('RGB')
+
+        self.__init__(config)
+
+        return PIL_page, text_bbox_list, char_bbox_list
 
     def add_subpage_into_page(self, np_page, PIL_subpage,
                               text_bbox_list, char_bbox_list, x1, x2, y1, y2, cover=False):
@@ -381,7 +464,7 @@ class generate_text_lines_with_text_handle:
         page_height, page_width = shape
 
         # 随机确定是否画边框线及行线
-        if random.random() < 0.7:
+        if random.random() < 0.7 and config.draw_line:
             draw_line = True
         else:
             draw_line = False
@@ -601,6 +684,16 @@ class generate_text_lines_with_text_handle:
                     if not config.full_line:
                         line_length = random.uniform(config.line_length, 1)
                         col_length = int(line_length * col_length)
+
+                    # 拉伸字体来充满整行（印章用）
+                    if config.full_line_reshape:
+                        char_num = random.randint(config.char_num_in_line[0], config.char_num_in_line[1])
+                        config.char_reshape = True
+                        config.char_reshape_line = 'both'
+                        char_height = int(col_length / char_num)
+                        config.char_single_line_reshape_stretch = char_height/(x2-x1+1)
+                        config.char_single_line_reshape_stretch = char_height/(x2-x1+1)
+
                     if config.line_type == 'mixed':
                         _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
                             x1, x2, y, col_length, np_page, char_spacing, symbol_position=symbol_position
@@ -722,7 +815,7 @@ class generate_text_lines_with_text_handle:
         char_list = []
         flag = 0 if random.random() < config.start_at_single else 1  # 以单行字串还是双行字串开始
         remaining_len = col_length
-        while remaining_len >= col_width:
+        while remaining_len >= 0.8 * col_width:
             flag += 1
             if flag % 2 == 1:
                 # 随机决定接下来的字串长度（这是大约数值，实际可能比它小,也可能比它大）
@@ -822,18 +915,24 @@ class generate_text_lines_with_text_handle:
         col_end = y + length - 1
         col_width = x2 - x1 + 1
         first_char = True
-        while length >= col_width:
+        while length >= 0.8 * col_width:
             # 就算字超过字框了，也不能让它超到页面外面去
+            strech_to_full_line = 0
             if not first_char:
                 if y + (char_spacing[0] + 1) * col_width >= np_background.shape[0]:
-                    break
+                    if config.full_line_reshape:
+                        last_char = True
+                    else:
+                        break
             if length < 1.5 * col_width:
                 last_char = True
             else:
                 last_char = False
+            if config.full_line_reshape and last_char:  # 印章专用，最后一个字拉长，撑满整行
+                strech_to_full_line = length
             chinese_char, bounding_box, y_tail = self.generate_char_img_into_unclosed_box_with_text(
                 np_background, x1=x1, y1=y, x2=x2, y2=None, char_spacing=char_spacing, first_char=first_char,
-                last_char=last_char, line_type=line_type, symbol_position=symbol_position
+                last_char=last_char, line_type=line_type, symbol_position=symbol_position, strech_to_full_line=strech_to_full_line
             )
             if chinese_char is None:
                 break
@@ -865,7 +964,7 @@ class generate_text_lines_with_text_handle:
 
     def generate_char_img_into_unclosed_box_with_text(self, np_background, x1, y1, x2=None, y2=None,
                                                       char_spacing=(0.05, 0.05), first_char=False, last_char=False,
-                                                      line_type='', symbol_position=True):
+                                                      line_type='', symbol_position=True, strech_to_full_line=0):
         config = self.config
         if x2 is None and y2 is None:
             raise ValueError("There is one and only one None in (x2, y2).")
@@ -1005,10 +1104,14 @@ class generate_text_lines_with_text_handle:
             if char_img_width * 1.4 < char_img_height:
                 # 对于“卜”这种高度很大、宽度很小的字，应该生成正方形的字图片
                 box_h = int(box_w * stretch)
+                if strech_to_full_line != 0:
+                    box_h = strech_to_full_line
                 np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_w=box_w, background_size_h=box_h)
             else:
                 # 对于宽高相差不大的字，宽度撑满，高度随意
                 box_h = int(round(char_img_height * box_w / char_img_width) * stretch)
+                if strech_to_full_line != 0:
+                    box_h = strech_to_full_line
                 np_char_img = resize_img_by_opencv(np_char_img, obj_size=(box_w, box_h))
 
             box_y2 = box_y1 + box_h - 1
@@ -1070,6 +1173,20 @@ class generate_text_lines_with_text_handle:
         name = chart_name + '- (' + str(num) + ').jpg'
         return os.path.join(config.chart_path, name)
 
+    def gen_font_labels_all(name_font, pth_font):
+        font = TTFont(pth_font)
+        unicode_map = font['cmap'].tables[0].ttFont.getBestCmap()
+        out = ''
+        for k,v in tqdm(unicode_map.items()):
+            # 过滤
+            # uni_lst = ['uni','u1','u2']
+            # if not any(uni in v for uni in uni_lst) or len(v) < 6 : continue
+            # out+=('{} ----> {}\n'.format(k, chr(int(v[3:],16))))
+            # 不过滤
+            out += ('{}\t{}\t{}\n'.format(k,v,chr(int(k))))
+        pth_font_labels = os.path.join(FONT_FILE_DIR, name_font+'.labels.txt')
+        with open(pth_font_labels, 'w+', encoding='utf-8') as f:
+            f.write(out)
 
 # 对字体图像做等比例缩放
 def resize_img_by_opencv(np_img, obj_size, make_border=False):

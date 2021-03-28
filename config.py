@@ -44,12 +44,14 @@ BOOK_PAGE_TAGS_FILE_H = os.path.join(DATA_DIR, "book_pages", "book_pages_tags_ho
 BOOK_PAGE_TAGS_FILE_V = os.path.join(DATA_DIR, "book_pages", "book_pages_tags_vertical.txt")
 
 FONT_FILE_DIR = os.path.join(CURR_DIR, "chinese_fonts")
+FONT_FILE_SEAL_DIR = os.path.join(CURR_DIR, "seal_fonts")
 DEFAULT_FONT_FILE_DIR = os.path.join(CURR_DIR, "charset/ZhongHuaSong")
 SHUFA_FILE_DIR = os.path.join(CURR_DIR, "shufa_imgs")
 
 # From "Diaolong" dataset, collect different shapess
 BOOK_PAGE_SHAPE_LIST = [(740, 990), (1480, 990), (2295, 1181), (2313, 1181),
                         (2387, 1206), (2390, 1243), (2439, 1184), (3168, 2382)]
+SEAL_SHAPE_LIST = [(1000, 1000), (1000, 2000), (2000, 1000), (3000, 2000), (2000, 3000)]
 
 EXTERNEL_IMAGES_DIR = "./ziku_images"
 # ************************ generate image data ***************************
@@ -93,6 +95,7 @@ class config_manager:
         self.chart_size_to_page_w = 0.5  # 图片宽 占页面的比例
         self.chart_position_x_y = [(0, 0), (0.5, 0)]  # 图片位置（比例）
 
+        self.seal_page = False  # 在页面内添加随机印章
 
         self.symbol_on_char = False  # 在字图上再加符号
         self.symbol_path = 'charset/symbol'  # 符号图的位置
@@ -157,10 +160,17 @@ class config_manager:
         self.char_imgs_path = SHUFA_FILE_DIR  # 如果使用字图，字图在哪里
 
         self.ttf_path = FONT_FILE_DIR  # 如果使用ttf，ttf文件在哪里
+        self.seal_ttf_path = FONT_FILE_SEAL_DIR  # 如果添加印章，ttf文件在哪里
         self.default_ttf_path = DEFAULT_FONT_FILE_DIR  # 如果使用ttf/字图且遇到不可绘制文字，默认的ttf文件
 
         self.line_type = 'mixed'  # 单行或混合单双行，或为字典特殊设计的行结构 [mixed|single|dict]
         self.line_num = (10, 15)
+
+        self.full_line_reshape = False  # 确定字数后拉伸字体来充满整行（印章专用）
+        self.char_num_in_line = (1, 2)  # 一行中的字数（印章专用）
+
+        self.draw_line = True  # 是否怀孕行间分割线
+        self.draw_frame = True  # 是否画边框
 
         self.region_num = (1, 1)
         self.region_thickness = 10
