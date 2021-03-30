@@ -1,5 +1,5 @@
 {
-  "obj_num": 10,
+  "obj_num": 1,
   "shape": [[362, 387], [735, 777], [372, 300], [408, 297], [715, 410]],
   "text_dict": "raw_text/leishu_sample.txt",
   "delete_symbol": true,
@@ -26,5 +26,5 @@
   "line_num": [1, 3],
   "full_line_reshape": true,
   "special_type": [],
-  "segment_type": "normal"
+  "segment_type": "crowded"
 }

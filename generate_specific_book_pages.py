@@ -137,7 +137,7 @@ class generate_text_lines_with_text_handle:
                         text_bbox_list = new_text_bbox_list
                         char_bbox_list = new_char_bbox_list
                     if config.seal_page:  # 印章的噪音多一些
-                        PIL_page = add_noise(PIL_page, 0.01, 0.03)
+                        PIL_page = add_noise(PIL_page, 0.006, 0.03)
                     else:
                         PIL_page = add_noise(PIL_page)
                     PIL_page = ocrodeg_augment(PIL_page, seal=config.seal_page)
@@ -380,59 +380,59 @@ class generate_text_lines_with_text_handle:
 
         return PIL_page, text_bbox_list, text_list, char_bbox_list, char_list
 
-    def add_seal(self, shape, text_bbox_list, char_bbox_list):
-        self.generate_char_handle = create_ttf_ch_handle(
-            ttf_path=config.seal_ttf_path,
-            default_ttf_path=config.default_ttf_path,
-            char_size=config.char_size,
-            canvas_size=config.canvas_size
-        )
-
-        page_height, page_width = shape
-        np_page = np.zeros(shape=shape, dtype=np.uint8)
-
-        seal_width = random.randint(int(page_width/8), int(page_height/4))
-
-        if random.random() < 0.3:  # 生成方形的印章
-            seal_height = seal_width
-        else:
-            seal_height = seal_width * random.randint(1, 3)
-        shape_seal = (seal_height, seal_width)
-
-        col_w = seal_width - 5
-
-        self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
-        PIL_page_seal, text_bbox_list_seal, text_list_seal, char_bbox_list_seal, char_list_seal, _ = self.create_book_page_with_text(
-            shape_seal, 'vertical', margin_at_top=False, margin_at_bottom=False,
-            margin_at_left=False, margin_at_right=False, draw_frame=False, col_w=col_w)
-
-        np_page_seal = np.array(PIL_page_seal, dtype=np.uint8)
-        np_page_seal = reverse_image_color(np_img=np_page_seal)
-        PIL_page_seal = Image.fromarray(np_page_seal)
-
-        x1 = random.randint(0, page_width - seal_width - 1)
-        x2 = x1 + seal_width
-        y1 = random.randint(0, page_height - seal_height - 1)
-        y2 = y1 + seal_height
-
-        np_page, text_bbox_list_seal, char_bbox_list_seal = self.add_subpage_into_page(
-            np_page, PIL_page_seal, text_bbox_list_seal, char_bbox_list_seal, x1, x2, y1, y2
-        )
-
-        text_bbox_list += text_bbox_list_seal
-        char_list_seal += char_bbox_list_seal
-
-        np_page = reverse_image_color(np_img=np_page)
-
-        black_img = np.zeros(shape)
-        black_img = reverse_image_color(np_img=black_img)
-        arr = np.dstack([black_img, np_page, np_page])
-
-        PIL_page = Image.fromarray(arr.astype('uint8')).convert('RGB')
-
-        self.__init__(config)
-
-        return PIL_page, text_bbox_list, char_bbox_list
+    # def add_seal(self, shape, text_bbox_list, char_bbox_list):
+    #     self.generate_char_handle = create_ttf_ch_handle(
+    #         ttf_path=config.seal_ttf_path,
+    #         default_ttf_path=config.default_ttf_path,
+    #         char_size=config.char_size,
+    #         canvas_size=config.canvas_size
+    #     )
+    #
+    #     page_height, page_width = shape
+    #     np_page = np.zeros(shape=shape, dtype=np.uint8)
+    #
+    #     seal_width = random.randint(int(page_width/8), int(page_height/4))
+    #
+    #     if random.random() < 0.3:  # 生成方形的印章
+    #         seal_height = seal_width
+    #     else:
+    #         seal_height = seal_width * random.randint(1, 3)
+    #     shape_seal = (seal_height, seal_width)
+    #
+    #     col_w = seal_width - 5
+    #
+    #     self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
+    #     PIL_page_seal, text_bbox_list_seal, text_list_seal, char_bbox_list_seal, char_list_seal, _ = self.create_book_page_with_text(
+    #         shape_seal, 'vertical', margin_at_top=False, margin_at_bottom=False,
+    #         margin_at_left=False, margin_at_right=False, draw_frame=False, col_w=col_w)
+    #
+    #     np_page_seal = np.array(PIL_page_seal, dtype=np.uint8)
+    #     np_page_seal = reverse_image_color(np_img=np_page_seal)
+    #     PIL_page_seal = Image.fromarray(np_page_seal)
+    #
+    #     x1 = random.randint(0, page_width - seal_width - 1)
+    #     x2 = x1 + seal_width
+    #     y1 = random.randint(0, page_height - seal_height - 1)
+    #     y2 = y1 + seal_height
+    #
+    #     np_page, text_bbox_list_seal, char_bbox_list_seal = self.add_subpage_into_page(
+    #         np_page, PIL_page_seal, text_bbox_list_seal, char_bbox_list_seal, x1, x2, y1, y2
+    #     )
+    #
+    #     text_bbox_list += text_bbox_list_seal
+    #     char_list_seal += char_bbox_list_seal
+    #
+    #     np_page = reverse_image_color(np_img=np_page)
+    #
+    #     black_img = np.zeros(shape)
+    #     black_img = reverse_image_color(np_img=black_img)
+    #     arr = np.dstack([black_img, np_page, np_page])
+    #
+    #     PIL_page = Image.fromarray(arr.astype('uint8')).convert('RGB')
+    #
+    #     self.__init__(config)
+    #
+    #     return PIL_page, text_bbox_list, char_bbox_list
 
     def add_subpage_into_page(self, np_page, PIL_subpage,
                               text_bbox_list, char_bbox_list, x1, x2, y1, y2, cover=False):
@@ -585,7 +585,7 @@ class generate_text_lines_with_text_handle:
             if config.segment_type == 'normal':
                 char_spacing = (random.uniform(0.0, 0.2), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
             elif config.segment_type == 'crowded':
-                char_spacing = (random.uniform(-0.1, 0.1), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+                char_spacing = (random.uniform(-0.1, 0), 0)  # (高方向, 宽方向)
             elif config.segment_type == 'spacious':
                 char_spacing = (random.uniform(0.3, 0.6), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
             elif config.segment_type == 'mixed':
@@ -916,18 +916,21 @@ class generate_text_lines_with_text_handle:
         col_width = x2 - x1 + 1
         first_char = True
         while length >= 0.8 * col_width:
+            last_char_seal = False
             # 就算字超过字框了，也不能让它超到页面外面去
             strech_to_full_line = 0
             if not first_char:
                 if y + (char_spacing[0] + 1) * col_width >= np_background.shape[0]:
                     if config.full_line_reshape:
-                        last_char = True
+                        last_char_seal = True
                     else:
                         break
             if length < 1.5 * col_width:
                 last_char = True
             else:
                 last_char = False
+            if last_char_seal:
+                last_char = True
             if config.full_line_reshape and last_char:  # 印章专用，最后一个字拉长，撑满整行
                 strech_to_full_line = length
             chinese_char, bounding_box, y_tail = self.generate_char_img_into_unclosed_box_with_text(
@@ -1106,12 +1109,17 @@ class generate_text_lines_with_text_handle:
                 box_h = int(box_w * stretch)
                 if strech_to_full_line != 0:
                     box_h = strech_to_full_line
-                np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_w=box_w, background_size_h=box_h)
+                if config.seal_page:  # 印章要撑满
+                    np_char_img = resize_img_by_opencv(np_char_img, obj_size=(box_w, box_h))
+                else:
+                    np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_w=box_w, background_size_h=box_h)
             else:
                 # 对于宽高相差不大的字，宽度撑满，高度随意
                 box_h = int(round(char_img_height * box_w / char_img_width) * stretch)
                 if strech_to_full_line != 0:
                     box_h = strech_to_full_line
+                    if char_img_height * 1.4 < char_img_width:
+                        np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_w=box_w, background_size_h=box_h)
                 np_char_img = resize_img_by_opencv(np_char_img, obj_size=(box_w, box_h))
 
             box_y2 = box_y1 + box_h - 1
