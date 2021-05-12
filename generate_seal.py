@@ -42,7 +42,7 @@ def change_seal_color(PIL_page):
     return PIL_rgb_page
     # return rgb_page.astype(np.uint8)
 
-def change_seal_shape(PIL_page, text_bbox_list, char_bbox_list):
+def change_seal_shape(PIL_page, text_bbox_list, char_bbox_list, split_vertical=False):
     np_seal = np.array(PIL_page, dtype=np.uint8)
     height_seal, width_seal = np_seal.shape
 
@@ -66,10 +66,10 @@ def change_seal_shape(PIL_page, text_bbox_list, char_bbox_list):
     else:
         shadow_seal = False
 
-    PIL_page = Image.fromarray(np_seal)
-
     outline_width = int(margin / 2)
-    np_seal, np_outline = round_corner(np_seal, outline_width, outline=True)
+
+    np_seal, np_outline, text_bbox_list, char_bbox_list = round_corner(np_seal, outline_width, text_bbox_list, char_bbox_list, shadow_seal, split_vertical)
+
     if random.random() < 0.5 or not shadow_seal:  # 一半概率加边框，若是阳刻印章，则加上边框
         if not shadow_seal:
             np_outline = resize_img_by_opencv(np_outline, obj_size=(width_seal, height_seal))
@@ -78,6 +78,7 @@ def change_seal_shape(PIL_page, text_bbox_list, char_bbox_list):
         h_margin = int((height_bg - h_outline)/2)
         np_background[h_margin:h_margin + h_outline, w_margin:w_margin + w_outline] |= np_outline
 
+    PIL_page = Image.fromarray(np_seal)
     np_page, text_bbox_list, char_bbox_list = add_subpage_into_page(
         np_background, PIL_page, text_bbox_list, char_bbox_list, x1_seal, x2_seal, y1_seal, y2_seal
     )
@@ -94,7 +95,7 @@ def change_seal_shape(PIL_page, text_bbox_list, char_bbox_list):
 
     return PIL_page, text_bbox_list, char_bbox_list
 
-def round_corner(np_seal, line_width, outline=False):
+def round_corner(np_seal, line_width, text_bbox_list, char_bbox_list, shadow_seal, split_vertical=False):
     circle_d = min(np_seal.shape[0], np_seal.shape[1])  # 圆的直径
 
     # 画实心圆，用于遮挡印章
@@ -111,17 +112,66 @@ def round_corner(np_seal, line_width, outline=False):
     draw.ellipse((0, 0, PIL_corner.size[0], PIL_corner.size[1]), fill=None, outline="white", width=line_width)
     np_corner = np.array(PIL_corner, dtype=np.uint8)
 
-    np_outline = np.zeros(shape=(np_seal.shape[0] + line_width*4, np_seal.shape[1] + line_width*4), dtype=np.uint8)
+    # 画矩形边框
+    np_outline = np.zeros(shape=(np_seal.shape[0], np_seal.shape[1]), dtype=np.uint8)
     PIL_outline = Image.fromarray(np_outline)
     draw = ImageDraw.Draw(PIL_outline)
     draw.rectangle((0, 0, PIL_outline.size[0], PIL_outline.size[1]), fill=None, outline="white", width=line_width)
     np_outline = np.array(PIL_outline, dtype=np.uint8)
 
+    change_size_to_round = False
+    change_shape_to_round = False
+    if random.random() < 1/3 or split_vertical:  # 矩形切角（若有半阴半阳，则只做矩形）
+        cut_corner = (0.15, 0.2)
+    else:  # 圆形或椭圆形印章
+        if random.random() < 0.5:
+            cut_corner = (0.3, 0.5)
+        else:
+            cut_corner = (0.5, 0.5)
+        if random.random() < 1/3:
+            change_shape_to_round = True
+        elif random.random() < 0.5 :
+            change_size_to_round = True
+
+    if change_size_to_round:
+        seal_reshape = 0.8
+
+        round_background = np.zeros(shape=np_seal.shape, dtype=np.uint8)
+        new_width = int(np_seal.shape[1] * seal_reshape)
+        new_height = int(np_seal.shape[0] * seal_reshape)
+
+        np_seal = resize_img_by_opencv(np_seal, obj_size=(new_width, new_height))
+
+        bbox_list_list = [text_bbox_list, char_bbox_list]
+        for bbox_list in bbox_list_list:
+            for bbox in bbox_list:
+                bbox[0] *= seal_reshape
+                bbox[1] *= seal_reshape
+                bbox[2] *= seal_reshape
+                bbox[3] *= seal_reshape
+
+        x1_round_seal = int((round_background.shape[1] - new_width) / 2)
+        x2_round_seal = x1_round_seal + new_width
+        y1_round_seal = int((round_background.shape[0] - new_height) / 2)
+        y2_round_seal = y1_round_seal + new_height
+
+        if shadow_seal:
+            np_seal = reverse_image_color(np_seal)
+
+        # 把seal缩小后加入新背景（白变黑）
+        PIL_seal = Image.fromarray(np_seal)
+        np_seal, text_bbox_list, char_bbox_list = add_subpage_into_page(
+            round_background, PIL_seal, text_bbox_list, char_bbox_list, x1_round_seal, x2_round_seal, y1_round_seal, y2_round_seal
+        )
+
+        if not shadow_seal:
+            np_seal = reverse_image_color(np_seal)
+
     # 切出四个弧度角
     for x in (0, circle_d):
         for y in (0, circle_d):
-            corner_x = random.randint(int(circle_d*0.15), int(circle_d*0.2))
-            corner_y = random.randint(int(circle_d*0.15), int(circle_d*0.2))
+            corner_x = random.randint(int(circle_d * cut_corner[0]), int(circle_d * cut_corner[1]))
+            corner_y = random.randint(int(circle_d * cut_corner[0]), int(circle_d * cut_corner[1]))
             x1_in_seal = 1
             y1_in_seal = 1
             if x == 0:
@@ -148,21 +198,26 @@ def round_corner(np_seal, line_width, outline=False):
                 x1_in_seal = np_seal.shape[1] - np_corner_circle.shape[1]
             if y1_in_seal != 0:
                 y1_in_seal = np_seal.shape[0] - np_corner_circle.shape[0]
+            if change_shape_to_round:
+                np_seal = follow_the_shape(np_corner_circle, np_seal,
+                                           x1_in_seal, x1_in_seal+np_corner_circle.shape[1],
+                                           y1_in_seal, y1_in_seal+np_corner_circle.shape[0])
 
             np_seal[y1_in_seal:y1_in_seal+np_corner_circle.shape[0], x1_in_seal:x1_in_seal+np_corner_circle.shape[1]] |= np_corner_circle
 
-            if outline:
-                np_corner_line = np_corner[y1:y2, x1:x2]
-                left, right, top, low = find_min_bound_box(np_corner_line)
-                if x1_in_seal != 0:
-                    x1_in_seal += line_width * 4
-                if y1_in_seal != 0:
-                    y1_in_seal += line_width * 4
-                np_corner_line = np_corner_line[top:low + 1, left:right + 1]
-                np_outline[y1_in_seal:y1_in_seal+np_corner_circle.shape[0],
-                    x1_in_seal:x1_in_seal+np_corner_circle.shape[1]] = np_corner_line
+            np_corner_line = np_corner[y1:y2, x1:x2]
+            left, right, top, low = find_min_bound_box(np_corner_line)
+            # if x1_in_seal != 0:
+            #     x1_in_seal += line_width * 4
+            # if y1_in_seal != 0:
+            #     y1_in_seal += line_width * 4
+            np_corner_line = np_corner_line[top:low + 1, left:right + 1]
+            np_outline[y1_in_seal:y1_in_seal+np_corner_circle.shape[0],
+                        x1_in_seal:x1_in_seal+np_corner_circle.shape[1]] = np_corner_line
 
-    return np_seal, np_outline
+    np_outline = resize_img_by_opencv(np_outline, obj_size=(np_seal.shape[1] + 4*line_width, np_seal.shape[0] + 4*line_width))
+
+    return np_seal, np_outline, text_bbox_list, char_bbox_list
 
 def add_subpage_into_page(np_page, PIL_subpage, text_bbox_list, char_bbox_list, x1, x2, y1, y2, cover=False):
     np_subpage = np.array(PIL_subpage, dtype=np.uint8)
@@ -205,3 +260,25 @@ def resize_img_by_opencv(np_img, obj_size, make_border=False):
     resized_np_img = cv2.resize(np_img, dsize=(obj_width, obj_height), interpolation=interpolation)
 
     return resized_np_img
+
+def follow_the_shape(np_corner, np_seal, x1, x2, y1, y2):
+    width = x2 - x1 - 1
+    height = y2 - y1 - 1
+    np_seal_in_shape = np_seal
+    first_black_point_y = 0
+
+    for i in range(0, width):
+        line_length = 0
+        first_black_point = False
+
+        for j in range(0, height):
+            if np_corner[j, i] == 0:
+                if not first_black_point:
+                    first_black_point = True
+                    first_black_point_y = j  # 找到该列第一个黑色像素点
+                line_length += 1  # 计算该列黑色像素点个数
+        if line_length > 0:
+            np_seal_in_shape[first_black_point_y + y1:first_black_point_y + line_length + y1, i + x1:i + x1 + 1] = \
+                cv2.resize(np_seal[y1:y2, i + x1:i + x1 + 1], dsize=(1, line_length))
+
+    return np_seal_in_shape

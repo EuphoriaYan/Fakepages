@@ -185,6 +185,10 @@ class config_manager:
         self.multiple_plate = False  # 某些排版需要多个板块拼接
         self.plate_type = 'note_inside'  # 拼接类型
 
+        self.page_color = 'white'  # 页面是阴还是阳[white|black|random]
+
+        self.contrast = False
+
         self.store_imgs = BOOK_PAGE_IMGS_V   # 在哪里存储图片
         self.store_tags = BOOK_PAGE_TAGS_FILE_V  # 在哪里存储标签
 

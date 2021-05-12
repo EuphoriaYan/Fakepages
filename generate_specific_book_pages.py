@@ -23,7 +23,7 @@ from util import IMPORTANT_CHARS
 from config import config_manager, FONT_FILE_DIR
 
 from img_utils import rotate_PIL_image, find_min_bound_box, adjust_img_and_put_into_background, reverse_image_color
-from noise_util import add_noise
+from noise_util import add_noise, white_erosion, triangle_contrast
 from ocrodeg import *
 from generate_font_sample import create_mix_ch_handle, create_imgs_ch_handle, create_ttf_ch_handle
 from generate_seal import change_seal_color, change_seal_shape
@@ -91,6 +91,13 @@ class generate_text_lines_with_text_handle:
                 else:
                     shape = config.shape
 
+                if config.seal_page:  # 1/8的概率生成半阴半阳的印章
+                    if random.random() < 1/8:
+                        config.multiple_plate = True
+                        config.plate_type = 'split_vertical'
+                    else:
+                        config.multiple_plate = False
+
                 if config.multiple_plate:
                     PIL_page, text_bbox_list, text_list, char_bbox_list, char_list = self.create_multiple_plate(
                         shape, orient, config.plate_type
@@ -105,7 +112,12 @@ class generate_text_lines_with_text_handle:
                 #     PIL_page_seal, text_bbox_list, char_bbox_list = self.add_seal(shape, text_bbox_list, char_bbox_list)
 
                 if config.seal_page:  # 给印章调整形状
-                    PIL_page, text_bbox_list, char_bbox_list = change_seal_shape(PIL_page, text_bbox_list, char_bbox_list)
+                    PIL_page, text_bbox_list, char_bbox_list = change_seal_shape(PIL_page, text_bbox_list, char_bbox_list, config.multiple_plate)
+
+                if config.contrast:
+                    for j in range(1, 20):
+                        PIL_page = triangle_contrast(PIL_page)
+
                 if config.augment:
                     new_text_bbox_list = []
                     new_char_bbox_list = []
@@ -137,6 +149,7 @@ class generate_text_lines_with_text_handle:
                         text_bbox_list = new_text_bbox_list
                         char_bbox_list = new_char_bbox_list
                     if config.seal_page:  # 印章的噪音多一些
+                        PIL_page = white_erosion(PIL_page)
                         PIL_page = add_noise(PIL_page, 0.006, 0.03)
                     else:
                         PIL_page = add_noise(PIL_page)
@@ -150,6 +163,10 @@ class generate_text_lines_with_text_handle:
                 #     PIL_page_seal = PIL_page_seal.convert('RGB')
                 #     PIL_page_seal = PIL_page_seal.resize(PIL_page.size)
                 #     PIL_page = Image.blend(PIL_page, PIL_page_seal, 0.4)
+                if config.page_color == 'black':
+                    PIL_page = reverse_image_color(PIL_img=PIL_page)
+                if config.page_color == 'random' and random.random() < 0.5:
+                    PIL_page = reverse_image_color(PIL_img=PIL_page)
 
                 image_tags = {"text_bbox_list": text_bbox_list, "text_list": text_list,
                               "char_bbox_list": char_bbox_list, "char_list": char_list}
@@ -174,6 +191,8 @@ class generate_text_lines_with_text_handle:
 
         if type == 'split_vertical':
             page_width_R = random.randint(int(page_width*0.3), int(page_width*0.7))
+            if config.seal_page:  # 印章对半分
+                page_width_R = int(page_width*0.5)
             page_width_L = page_width - page_width_R - 1
 
             x_L1 = 0
@@ -189,6 +208,13 @@ class generate_text_lines_with_text_handle:
                 shape_R, orient, margin_at_left=False, draw_frame=False)
             PIL_page_L, text_bbox_list_L, text_list_L, char_bbox_list_L, char_list_L, _ = self.create_book_page_with_text(
                 shape_L, orient, margin_at_right=False, draw_frame=False, col_w=col_w)
+
+            # 印章一半一半阴阳
+            if config.seal_page:
+                if random.random() < 0.5:
+                    PIL_page_L = reverse_image_color(PIL_img=PIL_page_L)
+                else:
+                    PIL_page_R = reverse_image_color(PIL_img=PIL_page_R)
 
             np_page, text_bbox_list_R, char_bbox_list_R = \
                 self.add_subpage_into_page(np_page, PIL_page_R, text_bbox_list_R, char_bbox_list_R,
@@ -815,7 +841,13 @@ class generate_text_lines_with_text_handle:
         char_list = []
         flag = 0 if random.random() < config.start_at_single else 1  # 以单行字串还是双行字串开始
         remaining_len = col_length
-        while remaining_len >= 0.8 * col_width:
+
+        if config.seal_page:
+            last_char_judge = 0.8
+        else:
+            last_char_judge = 1
+
+        while remaining_len >= last_char_judge * col_width:
             flag += 1
             if flag % 2 == 1:
                 # 随机决定接下来的字串长度（这是大约数值，实际可能比它小,也可能比它大）
@@ -915,7 +947,13 @@ class generate_text_lines_with_text_handle:
         col_end = y + length - 1
         col_width = x2 - x1 + 1
         first_char = True
-        while length >= 0.8 * col_width:
+
+        if config.seal_page:
+            last_char_judge = 0.8
+        else:
+            last_char_judge = 1
+
+        while length >= last_char_judge * col_width:
             last_char_seal = False
             # 就算字超过字框了，也不能让它超到页面外面去
             strech_to_full_line = 0

@@ -1,6 +1,5 @@
 {
   "obj_num": 10,
-  "shape": [[362, 387], [735, 777], [372, 300], [408, 297], [715, 410]],
   "text_dict": "raw_text/leishu_sample.txt",
   "delete_symbol": true,
   "keep_line_break": true,
@@ -9,9 +8,11 @@
   "char_size_w": 250,
   "canvas_size": 256,
   "max_rotate_angle": 5,
-  "seal_page": true,
   "symbol_on_char": false,
-  "use_bigger_canvas": false,
+  "use_bigger_canvas": true,
+  "use_bigger_canvas_double": true,
+  "use_bigger_canvas_scale_left": 0.2,
+  "use_bigger_canvas_scale_right": 0.2,
   "augment": true,
   "char_from": "ttf",
   "fonts_json": "/disks/sdb/projs/AncientBooks/data/chars/font_missing2.json",
@@ -19,12 +20,9 @@
   "type_fonts": "type/方正第二批.txt",
   "embedding_num": 250,
   "resume": 187920,
-  "line_type": "single",
-  "draw_line": false,
+  "line_type": "mixed",
   "charset_file": "charset/charset_xl.txt",
   "init_num": 0,
-  "line_num": [1, 3],
-  "full_line_reshape": true,
   "special_type": [],
-  "segment_type": "crowded"
+  "segment_type": "spacious"
 }
