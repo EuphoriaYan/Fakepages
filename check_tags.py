@@ -16,11 +16,11 @@ for line in file:
 
     img = Image.open('data/book_pages/imgs_vertical/book_page_0.jpg')
     draw = ImageDraw.Draw(img)
-    for bbox in text_bbox_list:
-        bbox_x1, bbox_y1, bbox_x2, bbox_y2 = bbox
-        draw.rectangle([(bbox_x1, bbox_y1), (bbox_x2, bbox_y2)], fill=None, outline="red", width=6)
-    # for bbox in char_bbox_list:
+    # for bbox in text_bbox_list:
     #     bbox_x1, bbox_y1, bbox_x2, bbox_y2 = bbox
-    #     draw.rectangle([(bbox_x1, bbox_y1), (bbox_x2, bbox_y2)], fill=None, outline="blue", width=6)
+    #     draw.rectangle([(bbox_x1, bbox_y1), (bbox_x2, bbox_y2)], fill=None, outline="red", width=6)
+    for bbox in char_bbox_list:
+        bbox_x1, bbox_y1, bbox_x2, bbox_y2 = bbox
+        draw.rectangle([(bbox_x1, bbox_y1), (bbox_x2, bbox_y2)], fill=None, outline="blue", width=6)
 
     img.save('data/book_pages/imgs_vertical/book_page_0_rect_text_page.jpg')

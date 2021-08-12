@@ -19,7 +19,7 @@ from torchvision import transforms
 from torch import nn
 import copy
 
-from util import IMPORTANT_CHARS, SMALL_IMPORTANT_CHARS
+from util import IMPORTANT_CHARS, SMALL_IMPORTANT_CHARS, UNDERLINE_CHAR
 from config import config_manager, FONT_FILE_DIR
 
 from img_utils import rotate_PIL_image, find_min_bound_box, adjust_img_and_put_into_background, reverse_image_color, \
@@ -737,8 +737,16 @@ class generate_text_lines_with_text_handle:
                         )
                         text_bbox_list = [text_bbox]
                         text_list = [text]
-                        char_bbox_list = char_bbox
-                        char_list = text
+
+                        char_bbox_list = []
+                        char_list = []
+                        for i in range(0, len(text)):
+                            if text[i] not in SMALL_IMPORTANT_CHARS:
+                                char_bbox_list.append(char_bbox[i])
+                                char_list.extend(text[i])
+
+                        # char_bbox_list = char_bbox
+                        # char_list = text
                     else:
                         raise ValueError
 
@@ -870,8 +878,14 @@ class generate_text_lines_with_text_handle:
                 )
                 text_bbox_list.append(text_bbox)
                 text_list.append(text)
-                char_bbox_list.extend(char_bbox)
-                char_list.extend(text)
+
+                for i in range(0, len(text)):
+                    if text[i] not in SMALL_IMPORTANT_CHARS:
+                        char_bbox_list.extend(char_bbox[i])
+                        char_list.extend(text[i])
+
+                # char_bbox_list.extend(char_bbox)
+                # char_list.extend(text)
             else:
                 # 随机决定接下来的字串长度（这是大约数值，实际可能比它小,也可能比它大）
                 max_length = col_width * config.limit_max_length_double
@@ -1241,7 +1255,7 @@ class generate_text_lines_with_text_handle:
         char_box_tail = box_x2 + 1 if x2 is None else box_y2 + 1
 
         # 在纵向排版情况下，以下标点符号将会紧挨放在字的右侧，不占用位置
-        if config.orient == 'vertical' and chinese_char in set('，。“”‘’？！﹑、:：；;·'):
+        if config.orient == 'vertical' and chinese_char in SMALL_IMPORTANT_CHARS:
             char_box_tail = y1
 
         return chinese_char, bounding_box, char_box_tail

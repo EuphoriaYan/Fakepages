@@ -62,7 +62,8 @@ def chinese_labels_dict(charset_size='m'):
 ID2CHAR_DICT, CHAR2ID_DICT, NUM_CHARS = chinese_labels_dict()
 BLANK_CHAR = ID2CHAR_DICT[0]
 IMPORTANT_CHARS = set('，。“”‘’？！《》、（）〔〕:：；;·［］【】〈〉<>︻︼︵︶︹︺△')
-SMALL_IMPORTANT_CHARS = set('，。“”‘’？！﹑、:：；;·')
+SMALL_IMPORTANT_CHARS = set('，。“”‘’？！﹑、:：；;·$')
+UNDERLINE_CHAR = '$'
 
 
 def traditional_chars():
