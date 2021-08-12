@@ -1,5 +1,5 @@
 {
-  "obj_num": 1,
+  "obj_num": 10,
   "text_dict": "raw_text/ci_qu_shi_sample.txt",
   "text_save_punctuation": true,
   "delete_symbol": true,

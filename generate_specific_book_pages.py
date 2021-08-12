@@ -750,6 +750,8 @@ class generate_text_lines_with_text_handle:
                     else:
                         raise ValueError
 
+
+
                     text_bbox_records_list.extend(text_bbox_list)
                     text_records_list.extend(text_list)
                     char_bbox_records_list.extend(char_bbox_list)
@@ -1259,6 +1261,22 @@ class generate_text_lines_with_text_handle:
             char_box_tail = y1
 
         return chinese_char, bounding_box, char_box_tail
+
+    def generate_underline_right_side(self, PIL_page, text, char_bbox):
+        part_num = random.randint(1, min(6, len(text)))
+        part_edges = []
+
+        # 划分边界
+        for i in range(1, part_num):
+            edge = random.randint(0, len(text))
+            while edge in part_edges:
+                edge = random.randint(0, len(text))
+
+        # 按大小给边界排序
+        part_edges.sort()
+
+
+
 
     def symbol_next_dict(self,symbol_name):
         config = self.config
