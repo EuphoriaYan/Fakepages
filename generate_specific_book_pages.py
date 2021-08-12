@@ -19,10 +19,11 @@ from torchvision import transforms
 from torch import nn
 import copy
 
-from util import IMPORTANT_CHARS
+from util import IMPORTANT_CHARS, SMALL_IMPORTANT_CHARS
 from config import config_manager, FONT_FILE_DIR
 
-from img_utils import rotate_PIL_image, find_min_bound_box, adjust_img_and_put_into_background, reverse_image_color
+from img_utils import rotate_PIL_image, find_min_bound_box, adjust_img_and_put_into_background, reverse_image_color, \
+    edge_distortion, set_config
 from noise_util import add_noise, white_erosion, triangle_contrast
 from ocrodeg import *
 from generate_font_sample import create_mix_ch_handle, create_imgs_ch_handle, create_ttf_ch_handle
@@ -117,6 +118,9 @@ class generate_text_lines_with_text_handle:
                 if config.contrast:
                     for j in range(1, 20):
                         PIL_page = triangle_contrast(PIL_page)
+
+                if config.edge_distortion:
+                        PIL_page = edge_distortion(PIL_page)
 
                 if config.augment:
                     new_text_bbox_list = []
@@ -625,6 +629,9 @@ class generate_text_lines_with_text_handle:
             else:
                 raise ValueError
 
+            if config.text_save_punctuation:
+                char_spacing = (char_spacing[0], random.uniform(0.2, 0.25))
+
             # 汉字上下分区
             region_num = random.randint(config.region_num[0], config.region_num[1])
             rn = 0
@@ -1037,6 +1044,12 @@ class generate_text_lines_with_text_handle:
                             config.init_text()
                         chinese_char = config.text.get()
                         # print('hao')
+
+                    # 第一个字不能是以下标点符号
+                    while first_char and chinese_char in SMALL_IMPORTANT_CHARS:
+                        if config.text.empty():
+                            config.init_text()
+                        chinese_char = config.text.get()
                 PIL_char_img, flag = self.generate_char_handle.get_character(chinese_char)
 
         PIL_char_img = PIL_char_img.resize((config.char_size, config.char_size))
@@ -1048,10 +1061,16 @@ class generate_text_lines_with_text_handle:
                 rotate_angle=random.randint(-config.max_rotate_angle, config.max_rotate_angle)
             )
 
+        # 如果是纵向排版，这些标点符号旋转90度
+        if config.orient == 'vertical' and chinese_char in set('《》（）〔〕［］【】〈〉<>'):
+            PIL_char_img = rotate_PIL_image(PIL_char_img, rotate_angle=-90)
+
         # 转为numpy格式
         np_char_img = np.array(PIL_char_img, dtype=np.uint8)
 
-        if chinese_char in IMPORTANT_CHARS or chinese_char == ' ':
+        # if chinese_char in IMPORTANT_CHARS or chinese_char == ' ':
+        #     pass
+        if chinese_char == ' ':
             pass
         else:
             # 查找字体的最小包含矩形
@@ -1089,7 +1108,26 @@ class generate_text_lines_with_text_handle:
                 if symbol in ["one_circle_white","one_circle_black", "two_circles", "underline", "wave"]:
                     break
 
-        if x2 is None:  # 文本横向排列
+        if chinese_char in SMALL_IMPORTANT_CHARS and y2 is None:  # 纵向排列时的标点符号
+            col_w = x2 - x1 +1
+            char_spacing_h = round(col_w * char_spacing[0])
+            char_spacing_w = round(col_w * char_spacing[1])
+
+            # 标点符号放在上一个字的右侧
+            box_x1 = x2 - char_spacing_w
+            box_x2 = x2
+
+            box_w = box_x2 - box_x1 + 1
+            box_h = min(round(char_img_height * box_w / char_img_width), round(0.8 * (col_w - char_spacing_w)))
+            if box_h < round(0.5 * col_w):
+                box_y1 = y1 - random.randint(box_h, round(0.5 * col_w)) + char_spacing_h
+            else:
+                box_y1 = y1 - random.randint(box_h, round(0.8 * col_w)) + char_spacing_h
+            box_y2 = box_y1 + box_h - 1
+
+            np_char_img = resize_img_by_opencv(np_char_img, obj_size=(box_w, box_h))
+
+        elif x2 is None:  # 文本横向排列
             row_h = y2 - y1 + 1
             char_spacing_h = round(row_h * char_spacing[0])
             char_spacing_w = round(row_h * char_spacing[1])
@@ -1183,9 +1221,6 @@ class generate_text_lines_with_text_handle:
                 print('Can\'t resize, ignore this char')
                 return None, None, None
 
-        # 包围汉字的最小box作为bounding-box
-        # bounding_box = (box_x1, box_y1, box_x2, box_y2)
-
         # 随机选定汉字图片的bounding-box
         bbox_x1 = random.randint(x1, box_x1)
         if box_y1 > y1:
@@ -1199,7 +1234,15 @@ class generate_text_lines_with_text_handle:
             bbox_y2 = min(random.randint(box_y2 + char_spacing_h, box_y2), np_background.shape[0] - 1)
         bounding_box = [bbox_x1, bbox_y1, bbox_x2, bbox_y2]
 
+        # 包围标点符号的的最小box作为bounding-box
+        if chinese_char in SMALL_IMPORTANT_CHARS:
+            bounding_box = (box_x1, box_y1, box_x2, box_y2)
+
         char_box_tail = box_x2 + 1 if x2 is None else box_y2 + 1
+
+        # 在纵向排版情况下，以下标点符号将会紧挨放在字的右侧，不占用位置
+        if config.orient == 'vertical' and chinese_char in set('，。“”‘’？！﹑、:：；;·'):
+            char_box_tail = y1
 
         return chinese_char, bounding_box, char_box_tail
 
@@ -1293,6 +1336,8 @@ if __name__ == '__main__':
     config = json.load(open(config, 'r', encoding='utf-8'))
     pprint(config)
     config = config_manager(override_dict=config)
+
+    set_config(config)
 
     handle = generate_text_lines_with_text_handle(config)
     handle.generate_book_page_with_text()

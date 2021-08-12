@@ -67,6 +67,7 @@ class config_manager:
         self.text_from = 'dict'  # 文本来源，[text|dict|random]，dict必须配合config_type='dict'
         self.text = None  # 生成的文字
         self.text_dict = 'raw_text/leishu_sample.txt'  # 生成文字的目录
+        self.text_save_punctuation = False  # 是否保留文本中的标点符号
         self.delete_symbol = True
         self.keep_line_break = False  # 是否保留\n
         self.orient = 'vertical'  # 生成的方向
@@ -188,6 +189,7 @@ class config_manager:
         self.page_color = 'white'  # 页面是阴还是阳[white|black|random]
 
         self.contrast = False
+        self.edge_distortion = False  # 边缘是否有卷边
 
         self.store_imgs = BOOK_PAGE_IMGS_V   # 在哪里存储图片
         self.store_tags = BOOK_PAGE_TAGS_FILE_V  # 在哪里存储标签
@@ -226,7 +228,10 @@ class config_manager:
             with open(text_file, 'r', encoding='utf-8') as fp:
                 if not keep_line_break:
                     text = [line.strip() for line in fp]
-                text = [re.sub('[，。“”‘’？！《》、（）〔〕:：；;·［］【】〈〉<>︻︼︵︶︹︺△　]', '', line) for line in fp]
+                if not self.text_save_punctuation:
+                    text = [re.sub('[，。“”‘’？！《》、（）〔〕:：；;·［］【】〈〉<>︻︼︵︶︹︺△　]', '', line) for line in fp]
+                else:
+                    text = [line for line in fp]
                 text = list(filter(None, text))
             text = ''.join(text)
         self.text = Queue()

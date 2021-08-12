@@ -9,11 +9,15 @@ import math
 import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
-from config import config_manager
 
-con = config_manager()
-CHAR_IMG_SIZE = con.char_size
-MAX_ROTATE_ANGLE = con.max_rotate_angle
+CHAR_IMG_SIZE = 0.0
+MAX_ROTATE_ANGLE = 0
+
+def set_config(config):
+    global CHAR_IMG_SIZE
+    CHAR_IMG_SIZE =config.char_size
+    global MAX_ROTATE_ANGLE
+    MAX_ROTATE_ANGLE = config.max_rotate_angle
 
 # 先生成比目标size稍大的图片，图片处理(旋转裁剪)之后，再缩放至目标大小
 # 如果直接生成目标大小的图片，生成的字会更小，裁剪之后还需要再次放大
@@ -376,6 +380,11 @@ def load_external_image_bigger(img_path, white_background=True, reverse_color=Tr
 
     return bigger_PIL_img
 
+# 模拟页面边缘的卷边效果
+def edge_distortion(PIL_img):
+
+
+    return PIL_img
 
 if __name__ == "__main__":
     # PIL_img = generate_bigger_image_by_font(chinese_char="龥", font_file="../chinese_fonts/mingliu.ttc")

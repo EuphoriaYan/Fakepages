@@ -110,7 +110,7 @@ def triangle_contrast(PIL_page):
 
     triangle = np.array([[a_x, a_y], [b_x, b_y], [c_x, c_y]])
 
-    c = random.uniform(0.02, 0.1)
+    c = random.uniform(0.02, 0.3)
 
     cv2.fillConvexPoly(blank, triangle, (c, c, c))
 
