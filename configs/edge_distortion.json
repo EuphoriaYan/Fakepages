@@ -2,6 +2,7 @@
   "obj_num": 10,
   "text_dict": "raw_text/ci_qu_shi_sample.txt",
   "text_save_punctuation": true,
+  "right_underline": true,
   "delete_symbol": true,
   "keep_line_break": true,
   "orient": "vertical",

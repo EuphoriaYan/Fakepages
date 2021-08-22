@@ -74,6 +74,7 @@ class config_manager:
         self.char_size = 64  # 单字生成时的大小，默认为64
         self.canvas_size = 64  # 画布大小，等于或微大于char_size即可，需要同步修改
         self.max_rotate_angle = 5  # 最大的旋转角度
+        self.right_underline = False  # 随机右侧纵向下划线
 
         self.full_line = True  # 是否填满整行or整列
         self.line_length = 1  # 最小整行长度（占总行长的比例）

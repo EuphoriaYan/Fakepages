@@ -750,8 +750,6 @@ class generate_text_lines_with_text_handle:
                     else:
                         raise ValueError
 
-
-
                     text_bbox_records_list.extend(text_bbox_list)
                     text_records_list.extend(text_list)
                     char_bbox_records_list.extend(char_bbox_list)
@@ -1001,6 +999,21 @@ class generate_text_lines_with_text_handle:
             if chinese_char is None:
                 break
             char_and_box_list.append((chinese_char, bounding_box))
+            if config.right_underline:
+                if chinese_char in SMALL_IMPORTANT_CHARS and char_and_box_list[-2][0] in SMALL_IMPORTANT_CHARS:
+                    char_and_box_list.append((char_and_box_list[-2][0], bounding_box))
+                if chinese_char not in SMALL_IMPORTANT_CHARS and random.random() > 0.5:
+                    underline_type = self.generate_underline_right_side(np_background, y, y_tail, x2)
+
+                    if underline_type == 'wave':
+                        underline_char = '$'
+                    elif underline_type == 'line':
+                        underline_char = '&'
+                    else: # underline_type == 'doubleline'
+                        underline_char = '@'
+
+                    char_and_box_list.append((underline_char, bounding_box))
+
             added_length = y_tail - y
             length -= added_length
             y = y_tail
@@ -1130,8 +1143,8 @@ class generate_text_lines_with_text_handle:
             char_spacing_w = round(col_w * char_spacing[1])
 
             # 标点符号放在上一个字的右侧
-            box_x1 = x2 - char_spacing_w
-            box_x2 = x2
+            box_x1 = x2 - char_spacing_w - round(char_spacing_w/3)
+            box_x2 = x2 - round(char_spacing_w/3)
 
             box_w = box_x2 - box_x1 + 1
             box_h = min(round(char_img_height * box_w / char_img_width), round(0.8 * (col_w - char_spacing_w)))
@@ -1262,21 +1275,22 @@ class generate_text_lines_with_text_handle:
 
         return chinese_char, bounding_box, char_box_tail
 
-    def generate_underline_right_side(self, PIL_page, text, char_bbox):
-        part_num = random.randint(1, min(6, len(text)))
-        part_edges = []
+    def generate_underline_right_side(self, np_background, y1, y2, x2):
+        right_under_line = ['wave', 'line', 'doubleline']
+        underline_type = right_under_line[random.randint(0, 2)]
+        right_line = Image.open('charset/symbol/right_' + underline_type + '.png')
+        np_right_line = np.array(right_line, dtype=np.uint8)
+        wave_h = np_right_line.shape[0]
+        wave_w = np_right_line.shape[1]
 
-        # 划分边界
-        for i in range(1, part_num):
-            edge = random.randint(0, len(text))
-            while edge in part_edges:
-                edge = random.randint(0, len(text))
+        height = np_background.shape[0]
+        width = min(wave_w, max(round(height / wave_h * wave_w), 1))
 
-        # 按大小给边界排序
-        part_edges.sort()
+        np_right_line = resize_img_by_opencv(np_right_line, obj_size=(width, height))
+        x2 -= round(width/2)
+        np_background[y1:y2+1, x2-width:x2] |= np_right_line[y1:y2+1, 0:width]
 
-
-
+        return underline_type
 
     def symbol_next_dict(self,symbol_name):
         config = self.config
