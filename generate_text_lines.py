@@ -231,7 +231,7 @@ def create_one_text_line(shape=(64, 960), text_type="horizontal", edges=False):
         length = text_h - 2 * margin_h
         _, _, char_and_box_list, split_pos = generate_one_col_chars(x1, x2, y, length, np_text, char_spacing)
 
-    np_text = reverse_image_color(np_img=np_text)
+    np_text = reverse_image_color(np_img=np_text, PIL_img=None)
     PIL_text = Image.fromarray(np_text)
 
     # print(chinese_char_and_box_list)
@@ -543,7 +543,8 @@ def generate_char_img_into_unclosed_box(np_background,
     if text is not None and not text.empty():
         chinese_char = text.get()
         fonts = os.listdir('./chinese_fonts')
-        font = random.choice(fonts)
+        # font = random.choice(fonts)  # 随机所有ttf
+        font = '方正新楷体_GBK(完整).TTF'  # 只使用楷体
         PIL_char_img = generate_bigger_image_by_font(
             chinese_char=chinese_char,
             font_file=os.path.join('./chinese_fonts', font),
@@ -583,7 +584,7 @@ def generate_char_img_into_unclosed_box(np_background,
         if char_img_height * 1.4 < char_img_width:
             # 对于“一”这种高度很小、宽度很大的字，应该生成正方形的字图片
             box_w = box_h
-            np_char_img = adjust_img_and_put_into_background(np_char_img, background_size=box_h)
+            np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_h=box_h)
         else:
             # 对于宽高相差不大的字，高度撑满，宽度随意
             box_w = round(char_img_width * box_h / char_img_height)
@@ -602,7 +603,7 @@ def generate_char_img_into_unclosed_box(np_background,
         if char_img_width * 1.4 < char_img_height:
             # 对于“卜”这种高度很大、宽度很小的字，应该生成正方形的字图片
             box_h = box_w
-            np_char_img = adjust_img_and_put_into_background(np_char_img, background_size=box_w)
+            np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_w=box_w)
         else:
             # 对于宽高相差不大的字，宽度撑满，高度随意
             box_h = round(char_img_height * box_w / char_img_width)
@@ -792,8 +793,10 @@ Char_Image_Generator_img = chinese_char_img_generator_using_shufa()
 
 if __name__ == '__main__':
     pass
+    IGNORABLE_CHARS = []
+    MAX_ROTATE_ANGLE = 5
     # generate_one_text_line_imgs(obj_num=100, text_type="horizontal")
-    # generate_one_text_line_imgs(obj_num=100, text_type="vertical")
+    generate_one_text_line_imgs(obj_num=100, text_type="vertical")
 
     # generate_two_text_line_imgs(obj_num=100, text_type="horizontal")
     # generate_two_text_line_imgs(obj_num=100, text_type="vertical")

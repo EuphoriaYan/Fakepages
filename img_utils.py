@@ -10,7 +10,7 @@ import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 
-CHAR_IMG_SIZE = 0.0
+CHAR_IMG_SIZE = 0
 MAX_ROTATE_ANGLE = 0
 
 def set_config(config):
