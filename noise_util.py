@@ -61,18 +61,34 @@ def add_noise(img, generate_ratio=0.003, generate_size=0.006):
     img = Image.fromarray(img)
     return img
 
-def white_erosion(img, generate_ratio=0.01, generate_size=0.04):
+def white_erosion(img, generate_ratio=0.01, generate_size=0.04, is_seal=False, noise_type='normal'):
     if not isinstance(img, np.ndarray):
         img = np.array(img)
     h, w = img.shape
     R_max = max(10, int(min(h, w) * generate_size))
 
     random_choise_list = []
-    for i in range(R_max, h - R_max):
-        for j in range(R_max, w - R_max):
-            if img[i, j] > 150:  # 找附近有黑色像素的白色像素点
-                if img[i+1, j] < 150 or img[i-1, j] < 150 or img[i, j+1] < 150 or img[i, j-1] < 150 :
-                    random_choise_list.append([i, j])
+    if is_seal:
+        for i in range(R_max, h - R_max):
+            for j in range(R_max, w - R_max):
+                if img[i, j] > 150:  # 找附近有黑色像素的白色像素点
+                    if img[i+1, j] < 150 or img[i-1, j] < 150 or img[i, j+1] < 150 or img[i, j-1] < 150 :
+                        random_choise_list.append([i, j])
+    else:
+        counter = 0
+        while True:
+            i = random.randint(R_max, h - R_max)
+            j = random.randint(R_max, w - R_max)
+            random_choise_list.append([i, j])
+            counter += 1
+            if counter > 200:
+                break
+
+        # for i in range(R_max, h - R_max):
+        #     for j in range(R_max, w - R_max):
+        #         if img[i, j] > 150:  # 找附近有黑色像素的白色像素点
+        #             if img[i+1, j] < 150 or img[i-1, j] < 150 or img[i, j+1] < 150 or img[i, j-1] < 150 :
+        #                 random_choise_list.append([i, j])
 
     threshold = int(w * h * (5 * (w+h) / len(random_choise_list)) * generate_ratio)
 
@@ -84,7 +100,10 @@ def white_erosion(img, generate_ratio=0.01, generate_size=0.04):
             for j in range(y - R, y + R):  # 以这个点为圆心，一半半径羽化边缘随机增加白色像素噪音
                 if cal_dis((i, j), (x, y)) < random.randint(int(R/2), R):
                     if random.random() < 0.6:
-                        img[i][j] = 255
+                        if noise_type == 'normal':
+                            img[i][j] = 255
+                        else:
+                            img[i][j] = 0
         cnt += 2 * R
         if cnt >= threshold:
             break

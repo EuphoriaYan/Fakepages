@@ -11,6 +11,7 @@ import numpy as np
 import pylab
 import scipy.ndimage as ndi
 from PIL import Image
+from PIL.ImageShow import show
 from tqdm import tqdm
 
 
@@ -252,7 +253,7 @@ def test():
     img.show()
 
 
-def ocrodeg_augment(img, seal=False):
+def ocrodeg_augment(img, seal=False, noise_type='normal'):
     img = np.array(img)
     # 50% use distort, 50% use raw
     flag = 0
@@ -269,6 +270,8 @@ def ocrodeg_augment(img, seal=False):
 
     img = img / 255
 
+    # show(Image.fromarray((img * 255).astype(np.uint8)))
+
     # 50% use binary blur, 50% use raw
     if random.random() < 0.5:
         img = binary_blur(
@@ -284,14 +287,18 @@ def ocrodeg_augment(img, seal=False):
     # flag=1 - 35% use multiscale, 35% use fibrous, 30% use raw
     # flag=2 - 20% use multiscale, 20% use fibrous, 60% use raw
 
-    rnd = random.random()
-    if rnd < 0.5 - flag * 0.15:
-        img = printlike_multiscale(img, blur=0.5, seal=seal)
-    elif rnd < 1 - flag * 0.15:
-        img = printlike_fibrous(img, seal=seal)
+    # show(Image.fromarray((img * 255).astype(np.uint8)))
+
+    if noise_type == 'normal':
+        rnd = random.random()
+        if rnd < 0.5 - flag * 0.15:
+            img = printlike_multiscale(img, blur=0.5, seal=seal)
+        elif rnd < 1 - flag * 0.15:
+            img = printlike_fibrous(img, seal=seal)
 
     img = (img * 255).astype(np.uint8)
     img = Image.fromarray(img)
+    # show(img)
     return img
 
 

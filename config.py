@@ -188,6 +188,7 @@ class config_manager:
         self.plate_type = 'note_inside'  # 拼接类型
 
         self.page_color = 'white'  # 页面是阴还是阳[white|black|random]
+        self.noise_type = 'normal'  # 页面噪声模式[normal|clean|complete_clean]
 
         self.contrast = False
         self.edge_distortion = False  # 边缘是否有卷边
