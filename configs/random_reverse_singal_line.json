@@ -11,7 +11,7 @@
   "max_rotate_angle": 0,
   "symbol_on_char": true,
   "symbol_use" : ["reverse"],
-  "symbol_prob" : [0.1],
+  "symbol_prob" : [0.05],
   "use_bigger_canvas": true,
   "augment": true,
   "char_from": "ttf",

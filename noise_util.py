@@ -81,7 +81,7 @@ def white_erosion(img, generate_ratio=0.01, generate_size=0.04, is_seal=False, n
             j = random.randint(R_max, w - R_max)
             random_choise_list.append([i, j])
             counter += 1
-            if counter > 200:
+            if counter > 20:
                 break
 
         # for i in range(R_max, h - R_max):
@@ -100,10 +100,7 @@ def white_erosion(img, generate_ratio=0.01, generate_size=0.04, is_seal=False, n
             for j in range(y - R, y + R):  # 以这个点为圆心，一半半径羽化边缘随机增加白色像素噪音
                 if cal_dis((i, j), (x, y)) < random.randint(int(R/2), R):
                     if random.random() < 0.6:
-                        if noise_type == 'normal':
-                            img[i][j] = 255
-                        else:
-                            img[i][j] = 0
+                        img[i][j] = 255
         cnt += 2 * R
         if cnt >= threshold:
             break

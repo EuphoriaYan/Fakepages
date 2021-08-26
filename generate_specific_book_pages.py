@@ -158,8 +158,8 @@ class generate_text_lines_with_text_handle:
                     elif config.noise_type == 'normal':
                         PIL_page = add_noise(PIL_page)
                     elif config.noise_type == 'clean':
-                        PIL_page = add_noise(PIL_page)
-                        PIL_page = white_erosion(PIL_page, noise_type=config.noise_type)
+                        PIL_page = add_noise(PIL_page, generate_ratio=0.001, generate_size=0.003)
+                        # PIL_page = white_erosion(PIL_page, generate_size=0.01, noise_type=config.noise_type)
 
                     if config.noise_type != 'complete_clean':
                         PIL_page = ocrodeg_augment(PIL_page, seal=config.seal_page, noise_type=config.noise_type)
