@@ -8,7 +8,7 @@
   "char_size_h": 250,
   "char_size_w": 250,
   "canvas_size": 256,
-  "max_rotate_angle": 5,
+  "max_rotate_angle": 0,
   "symbol_on_char": true,
   "symbol_use" : ["reverse"],
   "symbol_prob" : [0.1],
@@ -25,5 +25,8 @@
   "charset_file": "charset/charset_xl.txt",
   "init_num": 0,
   "special_type": [],
-  "segment_type": "normal"
+  "segment_type": "normal",
+  "noise_type": "complete_clean",
+  "draw_line": false,
+  "draw_frame": false
 }

@@ -160,7 +160,9 @@ class generate_text_lines_with_text_handle:
                     elif config.noise_type == 'clean':
                         PIL_page = add_noise(PIL_page)
                         PIL_page = white_erosion(PIL_page, noise_type=config.noise_type)
-                    PIL_page = ocrodeg_augment(PIL_page, seal=config.seal_page, noise_type=config.noise_type)
+
+                    if config.noise_type != 'complete_clean':
+                        PIL_page = ocrodeg_augment(PIL_page, seal=config.seal_page, noise_type=config.noise_type)
 
                 if config.seal_page:  # 给印章上色
                     PIL_page = change_seal_color(PIL_page)
@@ -1128,12 +1130,15 @@ class generate_text_lines_with_text_handle:
                 symbol_img = symbol_img.resize((symbol_width, symbol_height))
                 symbol_arr = np.array(symbol_img)
                 if symbol == 'reverse':
-                    if config.use_bigger_canvas:
-                        symbol_arr = bigger_canvas(symbol_arr)
-                    np_char_img = bigger_canvas(np_char_img, shrink=0.5)
-                    symbol_arr = reverse_image_color(np_img=symbol_arr)
-                    np_char_img |= symbol_arr
-                    np_char_img = reverse_image_color(np_img=np_char_img)
+                    if config.noise_type == 'complete_clean':
+                        np_char_img = reverse_image_color(np_img=np_char_img)
+                    else:
+                        if config.use_bigger_canvas:
+                            symbol_arr = bigger_canvas(symbol_arr)
+                        np_char_img = bigger_canvas(np_char_img, shrink=0.5)
+                        symbol_arr = reverse_image_color(np_img=symbol_arr)
+                        np_char_img |= symbol_arr
+                        np_char_img = reverse_image_color(np_img=np_char_img)
                 else:
                     np_char_img |= symbol_arr
 
