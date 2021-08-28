@@ -114,7 +114,7 @@ class config_manager:
                             'period': os.path.join(self.symbol_path, '句号.PNG'),}
 
         self.symbol_next_char = False  # 不与字图重叠的符号
-        self.symbol_next_use = ['big_circle']  # 使用哪些符号
+        self.symbol_next_use = ['u25cb']  # 使用哪些符号[u25cb(大圆)|]
         self.symbol_next_prob = [0.1]  # 符号出现的概率，和symbol_next_use同样长度
         self.symbol_next_dict ={}
         self.symbol_number_next_char = ['chinese_number_with_circle_reverse',  # 带序号的特殊符号

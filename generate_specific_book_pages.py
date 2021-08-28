@@ -1062,6 +1062,9 @@ class generate_text_lines_with_text_handle:
                         continue
                     symbol_next_file = self.symbol_next_dict(symbol_next)
                     PIL_char_img = Image.open(symbol_next_file).convert('L')
+                    if 'u' in symbol_next:
+                        chinese_char = '\\' + symbol_next
+                        chinese_char = chinese_char.encode().decode('unicode_escape')
                     break
             if PIL_char_img is None:
                 if last_char and 'num_end' in config.special_type:
@@ -1102,8 +1105,6 @@ class generate_text_lines_with_text_handle:
         # 转为numpy格式
         np_char_img = np.array(PIL_char_img, dtype=np.uint8)
 
-        # if chinese_char in IMPORTANT_CHARS or chinese_char == ' ':
-        #     pass
         if chinese_char == ' ':
             pass
         else:
