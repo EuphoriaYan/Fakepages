@@ -1,5 +1,5 @@
 {
-  "obj_num": 10,
+  "obj_num": 100,
   "text_dict": "raw_text/leishu_sample.txt",
   "shape": [[2295, 225]],
   "delete_symbol": true,
@@ -11,7 +11,10 @@
   "max_rotate_angle": 0,
   "symbol_on_char": true,
   "symbol_use" : ["reverse"],
-  "symbol_prob" : [0.05],
+  "symbol_prob" : [0.01],
+  "symbol_next_char": true,
+  "symbol_next_use": ["u2588"],
+  "symbol_next_prob": [0.01],
   "use_bigger_canvas": true,
   "augment": true,
   "char_from": "ttf",
