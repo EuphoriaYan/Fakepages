@@ -153,11 +153,16 @@ class generate_text_lines_with_text_handle:
                         text_bbox_list = new_text_bbox_list
                         char_bbox_list = new_char_bbox_list
                     if config.seal_page:  # 印章的噪音多一些
-                        PIL_page = white_erosion(PIL_page)
+                        PIL_page = white_erosion(PIL_page, is_seal=True)
                         PIL_page = add_noise(PIL_page, 0.006, 0.03)
-                    else:
+                    elif config.noise_type == 'normal':
                         PIL_page = add_noise(PIL_page)
-                    PIL_page = ocrodeg_augment(PIL_page, seal=config.seal_page)
+                    elif config.noise_type == 'clean':
+                        PIL_page = add_noise(PIL_page, generate_ratio=0.001, generate_size=0.003)
+                        # PIL_page = white_erosion(PIL_page, generate_size=0.01, noise_type=config.noise_type)
+
+                    if config.noise_type != 'complete_clean':
+                        PIL_page = ocrodeg_augment(PIL_page, seal=config.seal_page, noise_type=config.noise_type)
 
                 if config.seal_page:  # 给印章上色
                     PIL_page = change_seal_color(PIL_page)
@@ -881,7 +886,7 @@ class generate_text_lines_with_text_handle:
 
                 for i in range(0, len(text)):
                     if text[i] not in SMALL_IMPORTANT_CHARS:
-                        char_bbox_list.extend(char_bbox[i])
+                        char_bbox_list.append(char_bbox[i])
                         char_list.extend(text[i])
 
                 # char_bbox_list.extend(char_bbox)
@@ -1125,12 +1130,15 @@ class generate_text_lines_with_text_handle:
                 symbol_img = symbol_img.resize((symbol_width, symbol_height))
                 symbol_arr = np.array(symbol_img)
                 if symbol == 'reverse':
-                    if config.use_bigger_canvas:
-                        symbol_arr = bigger_canvas(symbol_arr)
-                    np_char_img = bigger_canvas(np_char_img, shrink=0.5)
-                    symbol_arr = reverse_image_color(np_img=symbol_arr)
-                    np_char_img |= symbol_arr
-                    np_char_img = reverse_image_color(np_img=np_char_img)
+                    if config.noise_type == 'complete_clean':
+                        np_char_img = reverse_image_color(np_img=np_char_img)
+                    else:
+                        if config.use_bigger_canvas:
+                            symbol_arr = bigger_canvas(symbol_arr)
+                        np_char_img = bigger_canvas(np_char_img, shrink=0.5)
+                        symbol_arr = reverse_image_color(np_img=symbol_arr)
+                        np_char_img |= symbol_arr
+                        np_char_img = reverse_image_color(np_img=np_char_img)
                 else:
                     np_char_img |= symbol_arr
 
@@ -1143,8 +1151,8 @@ class generate_text_lines_with_text_handle:
             char_spacing_w = round(col_w * char_spacing[1])
 
             # 标点符号放在上一个字的右侧
-            box_x1 = x2 - char_spacing_w - round(char_spacing_w/3)
-            box_x2 = x2 - round(char_spacing_w/3)
+            box_x1 = x2 - round(char_spacing_w)
+            box_x2 = x2 - round(char_spacing_w * 0.3)
 
             box_w = box_x2 - box_x1 + 1
             box_h = min(round(char_img_height * box_w / char_img_width), round(0.8 * (col_w - char_spacing_w)))
@@ -1280,14 +1288,12 @@ class generate_text_lines_with_text_handle:
         underline_type = right_under_line[random.randint(0, 2)]
         right_line = Image.open('charset/symbol/right_' + underline_type + '.png')
         np_right_line = np.array(right_line, dtype=np.uint8)
-        wave_h = np_right_line.shape[0]
-        wave_w = np_right_line.shape[1]
+        wave_h, wave_w = np_right_line.shape
 
         height = np_background.shape[0]
         width = min(wave_w, max(round(height / wave_h * wave_w), 1))
 
         np_right_line = resize_img_by_opencv(np_right_line, obj_size=(width, height))
-        x2 -= round(width/2)
         np_background[y1:y2+1, x2-width:x2] |= np_right_line[y1:y2+1, 0:width]
 
         return underline_type
