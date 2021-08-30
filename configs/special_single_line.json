@@ -18,7 +18,7 @@
   "use_bigger_canvas": true,
   "augment": true,
   "char_from": "ttf",
-  "ttf_path": "charset/FangSong",
+  "ttf_path": "charset/Kai",
   "fonts_json": "/disks/sdb/projs/AncientBooks/data/chars/font_missing2.json",
   "font_magic_experiment": "fz2_experiment/",
   "type_fonts": "type/方正第二批.txt",
