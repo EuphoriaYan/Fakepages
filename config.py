@@ -183,7 +183,7 @@ class config_manager:
         self.init_num = 0  # 生成的初始序号，用于中断后继续生成
 
         self.special_type = []  # 特殊的格式  从[split|num_end|num_start]中选择并加入
-        self.segment_type = 'normal'  # 字之间间隔格式 [normal|spacious|crowded|mixed]
+        self.segment_type = 'normal'  # 字之间间隔格式 [normal|spacious|crowded|mixed|crowded_x]
 
         self.multiple_plate = False  # 某些排版需要多个板块拼接
         self.plate_type = 'note_inside'  # 拼接类型

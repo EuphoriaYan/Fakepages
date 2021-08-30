@@ -29,7 +29,7 @@
   "charset_file": "charset/charset_xl.txt",
   "init_num": 0,
   "special_type": [],
-  "segment_type": "crowded",
+  "segment_type": "crowded_x",
   "margin_type": "none",
   "noise_type": "complete_clean",
   "draw_line": false,
