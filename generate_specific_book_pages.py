@@ -507,8 +507,18 @@ class generate_text_lines_with_text_handle:
         draw = ImageDraw.Draw(PIL_page)
 
         # 随机确定书页边框
-        margin_w = round(random.uniform(0.01, 0.05) * page_width)
-        margin_h = round(random.uniform(0.01, 0.05) * page_height)
+        if config.margin_type == 'normal':
+            margin_w = round(random.uniform(0.01, 0.05) * page_width)
+            margin_h = round(random.uniform(0.01, 0.05) * page_height)
+        elif config.margin_type == 'wide':
+            margin_w = round(random.uniform(0.05, 0.1) * page_width)
+            margin_h = round(random.uniform(0.05, 0.1) * page_height)
+        elif config.margin_type == 'narrow':
+            margin_w = round(random.uniform(0, 0.02) * page_width)
+            margin_h = round(random.uniform(0, 0.02) * page_height)
+        else:  # config.margin_type == 'none'
+            margin_w = 0
+            margin_h = 0
         margin_left = margin_w
         margin_right = margin_w
         margin_top = margin_h

@@ -173,6 +173,7 @@ class config_manager:
 
         self.draw_line = True  # 是否怀孕行间分割线
         self.draw_frame = True  # 是否画边框
+        self.margin_type = 'normal'  # 页边距类型[normal|wide|narrow|none]
 
         self.region_num = (1, 1)
         self.region_thickness = 10
