@@ -507,8 +507,18 @@ class generate_text_lines_with_text_handle:
         draw = ImageDraw.Draw(PIL_page)
 
         # 随机确定书页边框
-        margin_w = round(random.uniform(0.01, 0.05) * page_width)
-        margin_h = round(random.uniform(0.01, 0.05) * page_height)
+        if config.margin_type == 'normal':
+            margin_w = round(random.uniform(0.01, 0.05) * page_width)
+            margin_h = round(random.uniform(0.01, 0.05) * page_height)
+        elif config.margin_type == 'wide':
+            margin_w = round(random.uniform(0.05, 0.1) * page_width)
+            margin_h = round(random.uniform(0.05, 0.1) * page_height)
+        elif config.margin_type == 'narrow':
+            margin_w = round(random.uniform(0, 0.02) * page_width)
+            margin_h = round(random.uniform(0, 0.02) * page_height)
+        else:  # config.margin_type == 'none'
+            margin_w = 0
+            margin_h = 0
         margin_left = margin_w
         margin_right = margin_w
         margin_top = margin_h
@@ -557,6 +567,8 @@ class generate_text_lines_with_text_handle:
                 char_spacing = (random.uniform(0.0, 0.2), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
             elif config.segment_type == 'crowded':
                 char_spacing = (random.uniform(-0.1, 0.1), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
+            elif config.segment_type == 'crowded_x':
+                char_spacing = (random.uniform(0.0, 0.2), random.uniform(0.01, 0.02))  # (高方向, 宽方向)
             elif config.segment_type == 'spacious':
                 char_spacing = (random.uniform(0.3, 0.6), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
             elif config.segment_type == 'mixed':
@@ -621,6 +633,8 @@ class generate_text_lines_with_text_handle:
                 char_spacing = (random.uniform(0.0, 0.2), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
             elif config.segment_type == 'crowded':
                 char_spacing = (random.uniform(-0.1, 0), 0)  # (高方向, 宽方向)
+            elif config.segment_type == 'crowded_x':
+                char_spacing = (random.uniform(0.1, 1.5), 0)  # (高方向, 宽方向)
             elif config.segment_type == 'spacious':
                 char_spacing = (random.uniform(0.3, 0.6), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
             elif config.segment_type == 'mixed':
@@ -1140,6 +1154,9 @@ class generate_text_lines_with_text_handle:
                         symbol_arr = reverse_image_color(np_img=symbol_arr)
                         np_char_img |= symbol_arr
                         np_char_img = reverse_image_color(np_img=np_char_img)
+                elif symbol == 'big_circle':
+                        np_char_img = bigger_canvas(np_char_img, scale_top=0.1515, scale_bottom= 0.1515, useconfig=False)
+                        np_char_img |= symbol_arr
                 else:
                     np_char_img |= symbol_arr
 
@@ -1362,13 +1379,25 @@ def parse_args():
     config = args.config
     return config
 
-def bigger_canvas(np_char_img, shrink = 1):
+def bigger_canvas(np_char_img, shrink = 1, scale=0, scale_top=0, scale_bottom=0, scale_left=0, scale_right=0, useconfig=True):
     half = int(0.5 * config.char_size)
 
-    top = int(config.char_size * config.use_bigger_canvas_scale_top)
-    bottom = int(config.char_size * config.use_bigger_canvas_scale_bottom)
-    left = int(config.char_size * config.use_bigger_canvas_scale_left)
-    right = int(config.char_size * config.use_bigger_canvas_scale_right)
+    if useconfig:
+        top = int(config.char_size * config.use_bigger_canvas_scale_top)
+        bottom = int(config.char_size * config.use_bigger_canvas_scale_bottom)
+        left = int(config.char_size * config.use_bigger_canvas_scale_left)
+        right = int(config.char_size * config.use_bigger_canvas_scale_right)
+    else:
+        if scale != 0:
+            top = int(config.char_size * scale)
+            bottom = int(config.char_size * scale)
+            left = int(config.char_size * scale)
+            right = int(config.char_size * scale)
+        else:
+            top = int(config.char_size * scale_top)
+            bottom = int(config.char_size * scale_bottom)
+            left = int(config.char_size * scale_left)
+            right = int(config.char_size * scale_right)
 
     if shrink != 1:
         top = int(shrink * (top + half))
