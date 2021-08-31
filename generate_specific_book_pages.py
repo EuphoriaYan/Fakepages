@@ -634,7 +634,7 @@ class generate_text_lines_with_text_handle:
             elif config.segment_type == 'crowded':
                 char_spacing = (random.uniform(-0.1, 0), 0)  # (高方向, 宽方向)
             elif config.segment_type == 'crowded_x':
-                char_spacing = (random.uniform(0.3, 0.6), 0)  # (高方向, 宽方向)
+                char_spacing = (random.uniform(0.1, 1.5), 0)  # (高方向, 宽方向)
             elif config.segment_type == 'spacious':
                 char_spacing = (random.uniform(0.3, 0.6), random.uniform(0.02, 0.15))  # (高方向, 宽方向)
             elif config.segment_type == 'mixed':
