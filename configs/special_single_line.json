@@ -1,6 +1,6 @@
 {
-  "obj_num": 10,
-  "text_dict": "raw_text/test.txt",
+  "obj_num": 100,
+  "text_dict": "raw_text/leishu_sample.txt",
   "shape": [[2295, 225], [4590, 225], [2295, 125], [3725, 155]],
   "delete_symbol": true,
   "keep_line_break": true,
