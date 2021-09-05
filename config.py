@@ -84,6 +84,10 @@ class config_manager:
         self.limit_min_length_single = 1  # 单列or行的最少字数
         self.limit_min_length_double = 1  # 双列or行的最少字数
 
+        self.double_line_split_range = (0.4, 0.6)  # 双批的列宽分割位置
+        self.space_end_of_single = False
+        self.space_end_of_double = False
+
         self.start_at_single = 0.6  # 每行起始为单行的概率
         self.end_at_single = False  # 单行换行
         self.end_at_double = False  # 双行换行

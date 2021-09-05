@@ -907,8 +907,9 @@ class generate_text_lines_with_text_handle:
                 # char_list.extend(text)
             else:
                 # 随机决定接下来的字串长度（这是大约数值，实际可能比它小,也可能比它大）
-                max_length = col_width * config.limit_max_length_double
-                min_length = col_width * config.limit_min_length_double
+                max_height_rate = max(config.double_line_split_range[0], config.double_line_split_range[1]) + 0.05
+                max_length = round(col_width * config.limit_max_length_double * max_height_rate)
+                min_length = round(col_width * config.limit_min_length_double * max_height_rate)
                 length = min(remaining_len, random.randint(min_length, max_length))
 
                 # 该行结束，换行
@@ -929,7 +930,14 @@ class generate_text_lines_with_text_handle:
                     char_list.extend(text1)
                     char_bbox_list.extend(char_bbox2)
                     char_list.extend(text2)
+
+            # 单列和双批交界处的空白
+            if (config.space_end_of_single and flag % 2 == 1) or (config.space_end_of_double and flag % 2 == 0):
+                y += round(char_spacing[0] * col_width)
             remaining_len = col_length - (y - y_start)
+            if remaining_len < 0:
+                y -= round(char_spacing[0] * col_width)
+                remaining_len = 0
 
         # pure_two_lines = True if len(text_bbox_list) == 2 else False    # 1,2,1,2,... or 2,1,2,1,...
 
@@ -1049,7 +1057,7 @@ class generate_text_lines_with_text_handle:
 
     def generate_two_cols_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, symbol_position=True):
         col_width = x2 - x1 + 1
-        mid_x = x1 + round(col_width / random.uniform(1.7, 2.3))
+        mid_x = x1 + round(col_width * random.uniform(config.double_line_split_range[0], config.double_line_split_range[1],))
 
         y_1, text1_bbox, text1, char_bbox1 = self.generate_one_col_chars_with_text(
             mid_x + 1, x2, y, length, np_background, char_spacing, line_type='double', symbol_position=symbol_position)
