@@ -9,10 +9,9 @@ with open(text_file, 'r', encoding='utf-8') as fp:
 text = ''.join(text)
 
 i = 0
-# char_in_1MB = 341394
-char_in_1MB = 20000
+char_in_1MB = 341394
 
-new_file_size = 1
+new_file_size = 200
 new_text = Queue()
 
 dict_str = text_file.split('/')
