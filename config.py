@@ -17,6 +17,7 @@ IGNORABLE_CHARS_FILE = os.path.join(CURR_DIR, "chinese_labels", "ignorable_chars
 IMPORTANT_CHARS_FILE = os.path.join(CURR_DIR, "chinese_labels", "important_chars.txt")
 # ************************ basic configuration ***************************
 
+CURR_FILE = 0
 
 # ************************ generate image data ***************************
 DATA_DIR = os.path.join(CURR_DIR, "data")
@@ -67,6 +68,7 @@ class config_manager:
         self.text_from = 'dict'  # 文本来源，[text|dict|random]，dict必须配合config_type='dict'
         self.text = None  # 生成的文字
         self.text_dict = 'raw_text/leishu_sample.txt'  # 生成文字的目录
+        self.folder_dict = 'raw_text'  # 生成文字的txt所在文件夹
         self.text_save_punctuation = False  # 是否保留文本中的标点符号
         self.delete_symbol = True
         self.keep_line_break = False  # 是否保留\n
@@ -218,6 +220,13 @@ class config_manager:
             self.get_text_queue(self.text_dict, self.keep_line_break)
         elif self.text_from == 'random':
             self.get_text_queue('cover_charset', self.keep_line_break)
+        elif self.text_from == 'folder':
+            global CURR_FILE
+            text_list = os.listdir(self.folder_dict)
+            CURR_FILE = CURR_FILE % len(text_list)
+            dict = self.folder_dict + '/' + text_list[CURR_FILE]
+            self.get_text_queue(dict, self.keep_line_break)
+            CURR_FILE += 1
         else:
             raise ValueError
 
