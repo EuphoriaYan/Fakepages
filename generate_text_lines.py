@@ -231,7 +231,7 @@ def create_one_text_line(shape=(64, 960), text_type="horizontal", edges=False):
         length = text_h - 2 * margin_h
         _, _, char_and_box_list, split_pos = generate_one_col_chars(x1, x2, y, length, np_text, char_spacing)
 
-    np_text = reverse_image_color(np_img=np_text, PIL_img=None)
+    np_text = reverse_image_color(np_img=np_text)
     PIL_text = Image.fromarray(np_text)
 
     # print(chinese_char_and_box_list)
@@ -543,8 +543,7 @@ def generate_char_img_into_unclosed_box(np_background,
     if text is not None and not text.empty():
         chinese_char = text.get()
         fonts = os.listdir('./chinese_fonts')
-        # font = random.choice(fonts)  # 随机所有ttf
-        font = '方正新楷体_GBK(完整).TTF'  # 只使用楷体
+        font = random.choice(fonts)
         PIL_char_img = generate_bigger_image_by_font(
             chinese_char=chinese_char,
             font_file=os.path.join('./chinese_fonts', font),
@@ -590,6 +589,7 @@ def generate_char_img_into_unclosed_box(np_background,
             box_w = round(char_img_width * box_h / char_img_height)
             np_char_img = resize_img_by_opencv(np_char_img, obj_size=(box_w, box_h))
         box_x2 = box_x1 + box_w - 1
+
 
     else:  # y2 is None, 文本纵向排列
         col_w = x2 - x1 + 1

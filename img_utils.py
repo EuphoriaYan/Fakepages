@@ -10,7 +10,7 @@ import numpy as np
 import cv2
 from PIL import Image, ImageDraw, ImageFont
 
-CHAR_IMG_SIZE = 0
+CHAR_IMG_SIZE = 0.0
 MAX_ROTATE_ANGLE = 0
 
 def set_config(config):
@@ -247,6 +247,7 @@ def put_img_in_center(small_np_img, large_np_img):
     large_np_img[start_y:start_y + small_height, start_x:start_x + small_width] = small_np_img
 
     return large_np_img
+
 
 
 def adjust_img_and_put_into_background(np_img, background_size_h=CHAR_IMG_SIZE, background_size_w=CHAR_IMG_SIZE):
