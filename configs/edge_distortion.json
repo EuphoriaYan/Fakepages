@@ -27,5 +27,9 @@
   "edge_distortion": true,
   "draw_line": false,
   "draw_frame": false,
-  "noise_type": "clean"
+  "noise_type": "clean",
+  "shape": [[948, 581], [1009, 655]],
+  "line_num": [25,30],
+  "full_line": false,
+  "line_length": 0.2
 }

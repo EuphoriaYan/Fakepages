@@ -1317,7 +1317,7 @@ class generate_text_lines_with_text_handle:
         wave_h, wave_w = np_right_line.shape
 
         height = np_background.shape[0]
-        width = min(wave_w, max(round(height / wave_h * wave_w), 1))
+        width = min(wave_w, max(round((height / wave_h * wave_w) / (config.line_num[0] / 10)), 1))
 
         np_right_line = resize_img_by_opencv(np_right_line, obj_size=(width, height))
         np_background[y1:y2+1, x2-width:x2] |= np_right_line[y1:y2+1, 0:width]
