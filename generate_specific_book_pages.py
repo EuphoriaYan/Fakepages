@@ -1030,7 +1030,7 @@ class generate_text_lines_with_text_handle:
                 if chinese_char in SMALL_IMPORTANT_CHARS and char_and_box_list[-2][0] in SMALL_IMPORTANT_CHARS:
                     char_and_box_list.append((char_and_box_list[-2][0], bounding_box))
                 if chinese_char not in SMALL_IMPORTANT_CHARS and random.random() > 0.5:
-                    underline_type = self.generate_underline_right_side(np_background, y, y_tail, x2)
+                    underline_type = self.generate_underline_right_side(np_background, y, y_tail, x2, x2-x1+1)
 
                     if underline_type == 'wave':
                         underline_char = '$'
@@ -1309,7 +1309,7 @@ class generate_text_lines_with_text_handle:
 
         return chinese_char, bounding_box, char_box_tail
 
-    def generate_underline_right_side(self, np_background, y1, y2, x2):
+    def generate_underline_right_side(self, np_background, y1, y2, x2, char_width):
         right_under_line = ['wave', 'line', 'doubleline']
         underline_type = right_under_line[random.randint(0, 2)]
         right_line = Image.open('charset/symbol/right_' + underline_type + '.png')
@@ -1317,7 +1317,7 @@ class generate_text_lines_with_text_handle:
         wave_h, wave_w = np_right_line.shape
 
         height = np_background.shape[0]
-        width = min(wave_w, max(round((height / wave_h * wave_w) / (config.line_num[0] / 10)), 1))
+        width = min(wave_w, max(round(height / wave_h * wave_w), 1), round(char_width / 17))
 
         np_right_line = resize_img_by_opencv(np_right_line, obj_size=(width, height))
         np_background[y1:y2+1, x2-width:x2] |= np_right_line[y1:y2+1, 0:width]

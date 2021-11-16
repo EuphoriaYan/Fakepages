@@ -19,7 +19,6 @@
   "type_fonts": "type/方正第二批.txt",
   "embedding_num": 250,
   "resume": 187920,
-  "line_type": "single",
   "charset_file": "charset/charset_Deng.txt",
   "init_num": 0,
   "special_type": [],
@@ -28,7 +27,7 @@
   "draw_line": false,
   "draw_frame": false,
   "noise_type": "clean",
-  "shape": [[948, 581], [1009, 655]],
+  "shape": [[2295, 1500], [3000, 2994]],
   "line_num": [25,30],
   "full_line": false,
   "line_length": 0.2
