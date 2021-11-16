@@ -1,7 +1,8 @@
 import os
 from queue import Queue
 
-text_file = "raw_text/leishu_sample.txt"
+# text_file = "raw_text/leishu_sample.txt"
+text_file = "raw_text/combined_cor1+2.txt"
 
 with open(text_file, 'r', encoding='utf-8') as fp:
     text = [line for line in fp]

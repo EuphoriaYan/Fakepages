@@ -583,12 +583,13 @@ def generate_char_img_into_unclosed_box(np_background,
         if char_img_height * 1.4 < char_img_width:
             # 对于“一”这种高度很小、宽度很大的字，应该生成正方形的字图片
             box_w = box_h
-            np_char_img = adjust_img_and_put_into_background(np_char_img, background_size=box_h)
+            np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_h=box_h)
         else:
             # 对于宽高相差不大的字，高度撑满，宽度随意
             box_w = round(char_img_width * box_h / char_img_height)
             np_char_img = resize_img_by_opencv(np_char_img, obj_size=(box_w, box_h))
         box_x2 = box_x1 + box_w - 1
+
 
     else:  # y2 is None, 文本纵向排列
         col_w = x2 - x1 + 1
@@ -602,7 +603,7 @@ def generate_char_img_into_unclosed_box(np_background,
         if char_img_width * 1.4 < char_img_height:
             # 对于“卜”这种高度很大、宽度很小的字，应该生成正方形的字图片
             box_h = box_w
-            np_char_img = adjust_img_and_put_into_background(np_char_img, background_size=box_w)
+            np_char_img = adjust_img_and_put_into_background(np_char_img, background_size_w=box_w)
         else:
             # 对于宽高相差不大的字，宽度撑满，高度随意
             box_h = round(char_img_height * box_w / char_img_width)
@@ -792,8 +793,10 @@ Char_Image_Generator_img = chinese_char_img_generator_using_shufa()
 
 if __name__ == '__main__':
     pass
+    IGNORABLE_CHARS = []
+    MAX_ROTATE_ANGLE = 5
     # generate_one_text_line_imgs(obj_num=100, text_type="horizontal")
-    # generate_one_text_line_imgs(obj_num=100, text_type="vertical")
+    generate_one_text_line_imgs(obj_num=100, text_type="vertical")
 
     # generate_two_text_line_imgs(obj_num=100, text_type="horizontal")
     # generate_two_text_line_imgs(obj_num=100, text_type="vertical")

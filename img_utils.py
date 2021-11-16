@@ -249,6 +249,7 @@ def put_img_in_center(small_np_img, large_np_img):
     return large_np_img
 
 
+
 def adjust_img_and_put_into_background(np_img, background_size_h=CHAR_IMG_SIZE, background_size_w=CHAR_IMG_SIZE):
     obj_height = background_size_h
     obj_width = background_size_w
