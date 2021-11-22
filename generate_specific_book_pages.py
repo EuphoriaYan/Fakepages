@@ -107,7 +107,7 @@ class generate_text_lines_with_text_handle:
                     self.generate_char_handle.update()  # 更新生成单字的handle，切换当前字体/书法类型，一页一变
 
                     PIL_page, text_bbox_list, text_list, char_bbox_list, char_list, _ = self.create_book_page_with_text(
-                        shape, orient
+                        shape, orient, page_num=i
                     )
                 # if config.seal_in_page:  # 创建印章
                 #     PIL_page_seal, text_bbox_list, char_bbox_list = self.add_seal(shape, text_bbox_list, char_bbox_list)
@@ -490,7 +490,7 @@ class generate_text_lines_with_text_handle:
         return np_page, text_bbox_list, char_bbox_list
 
     def create_book_page_with_text(self, shape, orient, margin_at_top=True, margin_at_bottom=True,
-                                   margin_at_left=True, margin_at_right=True, draw_frame=True, plat_type='', col_w=0):
+                                   margin_at_left=True, margin_at_right=True, draw_frame=True, plat_type='', col_w=0, page_num = 0):
 
         config = self.config
 
@@ -748,11 +748,11 @@ class generate_text_lines_with_text_handle:
 
                     if config.line_type == 'mixed':
                         _, text_bbox_list, text_list, char_bbox_list, char_list = self.generate_mix_cols_chars_with_text(
-                            x1, x2, y, col_length, np_page, char_spacing, symbol_position=symbol_position
+                            x1, x2, y, col_length, np_page, char_spacing, symbol_position=symbol_position, page_num=page_num
                         )
                     elif config.line_type == 'single':
                         _, text_bbox, text, char_bbox = self.generate_one_col_chars_with_text(
-                            x1, x2, y, col_length, np_page, char_spacing
+                            x1, x2, y, col_length, np_page, char_spacing, page_num=page_num
                         )
                         text_bbox_list = [text_bbox]
                         text_list = [text]
@@ -865,7 +865,7 @@ class generate_text_lines_with_text_handle:
 
         return x, text_bbox_list, text_list, char_bbox_list, char_list
 
-    def generate_mix_cols_chars_with_text(self, x1, x2, y, col_length, np_background, char_spacing, symbol_position=True):
+    def generate_mix_cols_chars_with_text(self, x1, x2, y, col_length, np_background, char_spacing, symbol_position=True, page_num=0):
         col_width = x2 - x1 + 1
         y_start = y
 
@@ -893,7 +893,7 @@ class generate_text_lines_with_text_handle:
                 if config.end_at_single and flag == 1:
                     col_length = 0
                 y, text_bbox, text, char_bbox = self.generate_one_col_chars_with_text(
-                    x1, x2, y, length, np_background, char_spacing, symbol_position=symbol_position
+                    x1, x2, y, length, np_background, char_spacing, symbol_position=symbol_position, page_num=page_num
                 )
                 text_bbox_list.append(text_bbox)
                 text_list.append(text)
@@ -920,7 +920,7 @@ class generate_text_lines_with_text_handle:
                     y += length
                 else:
                     y, text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2 = self.generate_two_cols_chars_with_text(
-                        x1, x2, y, length, np_background, char_spacing, symbol_position=symbol_position
+                        x1, x2, y, length, np_background, char_spacing, symbol_position=symbol_position, page_num=page_num
                     )
                     text_bbox_list.append(text1_bbox)
                     text_list.append(text1)
@@ -988,7 +988,7 @@ class generate_text_lines_with_text_handle:
         return max(x_1, x_2), text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2
 
     def generate_one_col_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, line_type='single',
-                                         symbol_position=True):
+                                         symbol_position=True, page_num=0):
         # 记录下生成的汉字及其bounding-box
         char_and_box_list = []
 
@@ -1026,11 +1026,22 @@ class generate_text_lines_with_text_handle:
             if chinese_char is None:
                 break
             char_and_box_list.append((chinese_char, bounding_box))
-            if config.right_underline:
+            if config.text_save_punctuation:
                 if chinese_char in SMALL_IMPORTANT_CHARS and char_and_box_list[-2][0] in SMALL_IMPORTANT_CHARS:
                     char_and_box_list.append((char_and_box_list[-2][0], bounding_box))
-                if chinese_char not in SMALL_IMPORTANT_CHARS and random.random() > 0.5:
-                    underline_type = self.generate_underline_right_side(np_background, y, y_tail, x2, x2-x1+1)
+            if config.underline_the_side != 'none':
+                if random.random() > 0.5:
+                    if config.underline_the_side == 'right':
+                        underline_type = self.generate_underline_right_side(np_background, y, y_tail, x2, x2 - x1 + 1)
+                    elif config.underline_the_side == 'left':
+                        underline_type = self.generate_underline_left_side(np_background, y, y_tail, x1, x2 - x1 + 1)
+                    elif config.underline_the_side == 'mixed':
+                        if page_num % 2 == 0:
+                            underline_type = self.generate_underline_right_side(np_background, y, y_tail, x2, x2-x1+1)
+                        else:
+                            underline_type = self.generate_underline_left_side(np_background, y, y_tail, x1, x2-x1+1)
+                    else:
+                        raise ValueError
 
                     if underline_type == 'wave':
                         underline_char = '$'
@@ -1055,14 +1066,14 @@ class generate_text_lines_with_text_handle:
 
         return y, text_bbox, text, char_bbox
 
-    def generate_two_cols_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, symbol_position=True):
+    def generate_two_cols_chars_with_text(self, x1, x2, y, length, np_background, char_spacing, symbol_position=True, page_num=0):
         col_width = x2 - x1 + 1
         mid_x = x1 + round(col_width * random.uniform(config.double_line_split_range[0], config.double_line_split_range[1],))
 
         y_1, text1_bbox, text1, char_bbox1 = self.generate_one_col_chars_with_text(
-            mid_x + 1, x2, y, length, np_background, char_spacing, line_type='double', symbol_position=symbol_position)
+            mid_x + 1, x2, y, length, np_background, char_spacing, line_type='double', symbol_position=symbol_position, page_num=page_num)
         y_2, text2_bbox, text2, char_bbox2 = self.generate_one_col_chars_with_text(
-            x1, mid_x, y, length, np_background, char_spacing, line_type='double', symbol_position=symbol_position)
+            x1, mid_x, y, length, np_background, char_spacing, line_type='double', symbol_position=symbol_position, page_num=page_num)
 
         return max(y_1, y_2), text1_bbox, text2_bbox, text1, text2, char_bbox1, char_bbox2
 
@@ -1309,7 +1320,14 @@ class generate_text_lines_with_text_handle:
 
         return chinese_char, bounding_box, char_box_tail
 
-    def generate_underline_right_side(self, np_background, y1, y2, x2, char_width):
+    def generate_underline_right_side(self, np_background, y1, y2, x, char_width):
+        return self.generate_underline(np_background, y1, y2, x, char_width, 1)
+
+    def generate_underline_left_side(self, np_background, y1, y2, x, char_width):
+        x = x + round(char_width * 0.15)
+        return self.generate_underline(np_background, y1, y2, x, char_width, -1)
+
+    def generate_underline(self, np_background, y1, y2, x, char_width, side):
         right_under_line = ['wave', 'line', 'doubleline']
         underline_type = right_under_line[random.randint(0, 2)]
         right_line = Image.open('charset/symbol/right_' + underline_type + '.png')
@@ -1320,7 +1338,7 @@ class generate_text_lines_with_text_handle:
         width = min(wave_w, max(round(height / wave_h * wave_w), 1), round(char_width / 17))
 
         np_right_line = resize_img_by_opencv(np_right_line, obj_size=(width, height))
-        np_background[y1:y2+1, x2-width:x2] |= np_right_line[y1:y2+1, 0:width]
+        np_background[y1:y2+1, min(x - (width * side), x):max(x - (width * side), x)] |= np_right_line[y1:y2 + 1, 0:width]
 
         return underline_type
 
